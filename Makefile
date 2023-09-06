@@ -6,7 +6,7 @@ build:
 
 run: build
 	docker ps -q --filter name="otree-waiting-room" | xargs -r docker stop
-	docker run -p 8080:8080 --name otree-waiting-room --rm obeliss/waiting-room
+	docker run -p 8080:80 --name otree-waiting-room --rm obeliss/waiting-room
 
 shell:
 	docker exec -it otree-waiting-room /bin/bash
