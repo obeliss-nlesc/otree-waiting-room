@@ -7,8 +7,9 @@ const server = http.createServer(app);
 const io = socketIO(server);
 
 const config = require('./config.json')
+const port = 80
 
-const waitingUsers = [];
+const waitingUsers = []
 const serverQueue = createServerQueue(config)
 const serversInUse = []
 const matchUsers = 3
@@ -72,8 +73,8 @@ function createServerQueue(config) {
 }
 
 // Start the server
-server.listen(3000, () => {
-  console.log('Server listening on port 3000');
+server.listen(port, () => {
+  console.log('Waiting room listening on port: ', port);
 });
 
 
