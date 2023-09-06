@@ -6,7 +6,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
+const config = require('./config.json')
+
 const waitingUsers = [];
+const serverQueue = createServerQueue(config)
+const serversInUse = []
+const matchUsers = 3
+
+console.log(serverQueue)
 
 // Serve the HTML page
 app.get('/', (req, res) => {
@@ -17,8 +24,10 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   console.log('New user connected');
 
+  url = serverQueue.pop()
   // Add user to the waiting queue
-  waitingUsers.push(socket);
+  waitingUsers.push({'socket': socket, 'url': url});
+  serversInUse.push(url)
 
   // Handle disconnection
   socket.on('disconnect', () => {
@@ -27,8 +36,8 @@ io.on('connection', (socket) => {
   });
 
   // Check if there are enough users to start the game
-  if (waitingUsers.length >= 2) {
-    const gameUsers = waitingUsers.splice(0, 2);
+  if (waitingUsers.length >= matchUsers) {
+    const gameUsers = waitingUsers.splice(0, matchUsers);
     startGame(gameUsers);
   }
 });
@@ -43,17 +52,29 @@ function removeFromQueue(user) {
 
 // Function to start the game with the specified users
 function startGame(users) {
-  console.log('Starting game with users:', users.map(user => user.id));
+  console.log('Starting game with users:', users.map(user => user.socket.id));
   // Implement your game logic here
 
   // Emit a custom event to redirect users to the game room
   users.forEach((user) => {
-    user.emit('gameStart', { room: '/game' }); // Emit a custom event with the game room URL
+    user.socket.emit('gameStart', { room: user.url }); // Emit a custom event with the game room URL
   });
+}
+
+function createServerQueue(config) {
+  allExp = config.servers.map(server => {
+    return server.experiments
+  })
+  allUrls = allExp.map(exp => {
+    return exp[0]['urls']
+  })
+  return [].concat(...allUrls)
 }
 
 // Start the server
 server.listen(3000, () => {
   console.log('Server listening on port 3000');
 });
+
+
 
