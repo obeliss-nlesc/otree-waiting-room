@@ -7,6 +7,7 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
 const queue = require('./redis-queue.js')
+const db = require('./postgres-db')
 
 const config = require('./config.json')
 const port = 8060
@@ -32,21 +33,66 @@ function findUrls(exp, minUrls) {
   return null
 }
 
+function lastElement(arr) {
+  return arr[arr.length -1]
+}
+
 async function main() {
 
   const matchUsers = 3
   const experiments = {}
   const sockets = {}
+  const userMapping = {}
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
 
+  // Get participant info
+  app.get('/api/participants/:userId', async (req, res) => {
+    const participantUrl = userMapping[req.params.userId]
+    if(!participantUrl) {
+      res.status(404).json({message: `${req.params.userId} not found.`})
+      return
+    }
+    const parseUrl = url.parse(participantUrl)
+    const hostname = parseUrl.hostname
+    const participantCode = lastElement(parseUrl.pathname.split('/'))
+    results = await db.parQuery(`SELECT
+      code, 
+      _session_code, 
+      _current_page_name, 
+      _index_in_pages,
+      _last_page_timestamp,
+      _last_request_timestamp
+      FROM otree_participant 
+      WHERE code = '${participantCode}'`)
+    result = results.filter(r => {
+      if (r.length == 0) return false
+      return true
+    })
+    res.status(201).json(result)
+  })
+  
+  // Get all participants info
+  app.get('/api/participants', async (req, res) => {
+    results = await db.parQuery(`SELECT 
+      code, 
+      _session_code, 
+      _current_page_name, 
+      _index_in_pages,
+      _last_page_timestamp,
+      _last_request_timestamp
+      FROM otree_participant`)
+    //results = await db.parQuery('SELECT * FROM otree_participant')
+    res.status(201).json([].concat(...results))
+  })
+
   // Setup experiment server urls
-  app.post('/api/experiment/:experimentId', async (req, res) => {
+  app.post('/api/experiments/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const data = req.body
+    
     exp = getValue(experiments, experimentId, { 'servers': {} })
-
     data.servers.forEach(s => { 
       const config = {
         headers: {
@@ -128,26 +174,18 @@ async function main() {
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log('User disconnected');
-      //removeFromQueue(socket);
     });
 
   });
-
-  // Function to remove a user from the waiting queue
-  function removeFromQueue(user) {
-    const index = waitingUsers.indexOf(user);
-    if (index !== -1) {
-      waitingUsers.splice(index, 1);
-    }
-  }
 
   // Function to start the game with the specified users
   function startGame(users, urls) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`);
     for (let i = 0; i < users.length; i++) {
-      user = users[i]
-      expUrl = urls[i]
-      sock = sockets[user]
+      const user = users[i]
+      const expUrl = urls[i]
+      userMapping[user] = expUrl
+      const sock = sockets[user]
       // Emit a custom event with the game room URL
       sock.emit('gameStart', { room: expUrl }); 
     }
