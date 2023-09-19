@@ -1,81 +1,137 @@
-const express = require('express');
-const http = require('http');
-const socketIO = require('socket.io');
-
-const app = express();
-const server = http.createServer(app);
-const io = socketIO(server);
+const express = require('express')
+const http = require('http')
+const url = require('url')
+const socketIO = require('socket.io')
+const app = express()
+const server = http.createServer(app)
+const io = socketIO(server)
+const queue = require('./redis-queue.js')
 
 const config = require('./config.json')
-const port = 80
+const port = 8060
 
-const waitingUsers = []
-const serverQueue = createServerQueue(config)
-const serversInUse = []
-const matchUsers = 3
+function getValue(obj, key, defaultValue) {
+  if(!(key in obj)) {
+    obj[key] = defaultValue
+  }
+  return obj[key]
+}
 
-console.log(serverQueue)
+function findUrls(exp, minUrls) {
+  keys = Object.keys(exp.servers).filter(k => {
+    return (exp.servers[k].length >= minUrls)
+  })
+  if(keys.length > 0) {
+    urls = exp.servers[keys[0]].splice(0, minUrls)
+    return {
+      server: keys[0],
+      urls: urls
+    }
+  }
+  return null
+}
 
-// Serve the HTML page
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+async function main() {
 
-// Handle WebSocket connections
-io.on('connection', (socket) => {
-  console.log('New user connected');
+  const matchUsers = 3
+  const experiments = {}
+  const sockets = {}
 
-  url = serverQueue.pop()
-  // Add user to the waiting queue
-  waitingUsers.push({'socket': socket, 'url': url});
-  serversInUse.push(url)
+  app.engine('html', require('ejs').renderFile);
+  app.use(express.json());
 
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-    removeFromQueue(socket);
+  // Setup experiment server urls
+  app.post('/experiment/:experimentId', async (req, res) => {
+    const experimentId = req.params.experimentId
+    const data = req.body
+    exp = getValue(experiments, experimentId, { 'servers': {} })
+    data.urls.map(s => {
+      return new URL(s)
+    }).forEach(u => {
+      expUrls = getValue(exp.servers, u.hostname, [])
+      if(expUrls.includes(u)) {
+        return
+      } else {
+        expUrls.push(u)
+      }
+    })
+
+    //console.log(JSON.stringify(experiments, null, 2))
+
+    res.status(201).json({ message: 'Data received successfully.' });
+  })
+
+  app.delete('/experiment/:experimentId', (req, res) => {
+    queue.deleteQueue(experimentId).then(() => {
+      res.status(201).json({message: `Queue ${experimentId} deleted.`})
+    })
+  })
+
+  // Serve the HTML page
+  app.get('/experiment/:experimentId', async (req, res) => {
+    const experimentId = req.params.experimentId
+    const userId = req.query.userId
+    res.render(__dirname + '/index.html', {
+        "experimentId": experimentId,
+        "userId": userId
+      });
   });
 
-  // Check if there are enough users to start the game
-  if (waitingUsers.length >= matchUsers) {
-    const gameUsers = waitingUsers.splice(0, matchUsers);
-    startGame(gameUsers);
-  }
-});
+  io.on('connection', (socket) => {
+    socket.on('newUser', async (msg) => {
+      userId = msg.userId
+      experimentId = msg.experimentId
+      // Save socket
+      sockets[userId] = socket
+      console.log(`User ${userId} connected for experiment ${experimentId}.`);
+      queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
 
-// Function to remove a user from the waiting queue
-function removeFromQueue(user) {
-  const index = waitingUsers.indexOf(user);
-  if (index !== -1) {
-    waitingUsers.splice(index, 1);
-  }
-}
+      // Check if there are enough users to start the game
+      if (queuedUsers.length >= matchUsers) {
+        const gameUsers = await queue.pop(experimentId, matchUsers)
+        expUrls = findUrls(experiments[experimentId], matchUsers)
+        if(expUrls){
+          console.log("Starting game!")
+          startGame(gameUsers, expUrls.urls);
+        } else {
+          console.log("No servers found!")
+        }
+      }
+    })
 
-// Function to start the game with the specified users
-function startGame(users) {
-  console.log('Starting game with users:', users.map(user => user.socket.id));
-  // Implement your game logic here
+    // Handle disconnection
+    socket.on('disconnect', () => {
+      console.log('User disconnected');
+      //removeFromQueue(socket);
+    });
 
-  // Emit a custom event to redirect users to the game room
-  users.forEach((user) => {
-    user.socket.emit('gameStart', { room: user.url }); // Emit a custom event with the game room URL
   });
+
+  // Function to remove a user from the waiting queue
+  function removeFromQueue(user) {
+    const index = waitingUsers.indexOf(user);
+    if (index !== -1) {
+      waitingUsers.splice(index, 1);
+    }
+  }
+
+  // Function to start the game with the specified users
+  function startGame(users, urls) {
+    console.log(`Starting game with users: ${users} and urls ${urls}.`);
+    for (let i = 0; i < users.length; i++) {
+      user = users[i]
+      expUrl = urls[i]
+      sock = sockets[user]
+      // Emit a custom event with the game room URL
+      sock.emit('gameStart', { room: expUrl }); 
+    }
+  }
+
+  // Start the server
+  server.listen(port, () => {
+    console.log('Waiting room listening on port: ', port);
+  });
+
 }
 
-function createServerQueue(config) {
-  allExp = config.servers.map(server => {
-    return server.experiments
-  })
-  allUrls = allExp.map(exp => {
-    return exp[0]['urls']
-  })
-  return [].concat(...allUrls)
-}
-
-// Start the server
-server.listen(port, () => {
-  console.log('Waiting room listening on port: ', port);
-});
-
-
-
+main()
