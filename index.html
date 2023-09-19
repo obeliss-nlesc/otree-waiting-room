@@ -4,18 +4,25 @@
   <title>Waiting Room</title>
 </head>
 <body>
-  <h1>Welcome to the Waiting Room</h1>
+  <h1>Welcome to the waiting for experiment: <%= experimentId %></h1>
+  <h2>You are user <%= userId %></h2>
   <p>Waiting for other players to join...</p>
   <!-- Waiting Room HTML Code -->
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const experimentId = '<%= experimentId %>';
+    const userId = '<%= userId %>';
     // Connect to the WebSocket server
     const socket = io();
 
     // Handle connection established
     socket.on('connect', () => {
       console.log('Connected to server');
+      socket.emit("newUser", {
+        'experimentId': experimentId,
+        'userId': userId
+      })
     });
 
     // Handle disconnection

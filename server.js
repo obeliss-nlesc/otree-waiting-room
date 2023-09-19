@@ -4,64 +4,54 @@ const socketIO = require('socket.io')
 const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
-const Redis = require('ioredis');
-
-// Read .env file for env variables
-require('dotenv').config();
-const redisHost = process.env.REDIS_HOST
-
-function testRedis() {
-  // Create a Redis client
-  const redis = new Redis(redisHost);
-  // Key-value pair to be written
-  const key = 'test';
-  const value = 'test string';
-
-  // Set the key-value pair in Redis
-  return redis.set(key, value)
-    .then(() => {
-      console.log(`Successfully set "${key}" to "${value}" in Redis.`);
-    })
-    .catch((error) => {
-      console.error('Error setting data in Redis:', error);
-    })
-    .finally(() => {
-      // Close the Redis connection
-      redis.quit();
-    });
-}
-
+const queue = require('./redis-queue.js')
 
 const config = require('./config.json')
 const port = 8060
 
-
 async function main() {
-  await testRedis()
 
   const waitingUsers = []
   const serverQueue = createServerQueue(config)
   const serversInUse = []
   const matchUsers = 3
 
+  app.engine('html', require('ejs').renderFile);
+  app.use(express.json());
+
+  // Setup experiment server urls
+  app.post('/experiment/:experimentId', async (req, res) => {
+    const experimentId = req.params.experimentId
+    const data = req.body
+    console.log(experimentId)
+    console.log(data.servers)
+    res.status(201).json({ message: 'Data received successfully' });
+  })
+
   // Serve the HTML page
-  app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+  app.get('/experiment/:experimentId', async (req, res) => {
+    const experimentId = req.params.experimentId
+    const userId = req.query.userId
+    //await queue.deleteQueue(experimentId)
+    res.render(__dirname + '/index.html', {
+        "experimentId": experimentId,
+        "userId": userId
+      });
   });
 
-  // Handle WebSocket connections
   io.on('connection', (socket) => {
-    console.log('New user connected');
-
-    url = serverQueue.pop()
-    // Add user to the waiting queue
-    waitingUsers.push({'socket': socket, 'url': url});
-    serversInUse.push(url)
+    socket.on('newUser', async (msg) => {
+      userId = msg.userId
+      experimentId = msg.experimentId
+      console.log(`User ${userId} connected for experiment ${experimentId}.`);
+      queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
+      console.log(queuedUsers)
+    })
 
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log('User disconnected');
-      removeFromQueue(socket);
+      //removeFromQueue(socket);
     });
 
     // Check if there are enough users to start the game
