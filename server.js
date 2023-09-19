@@ -1,5 +1,6 @@
 const express = require('express')
 const http = require('http')
+const url = require('url')
 const socketIO = require('socket.io')
 const app = express()
 const server = http.createServer(app)
@@ -9,12 +10,20 @@ const queue = require('./redis-queue.js')
 const config = require('./config.json')
 const port = 8060
 
+function getValue(obj, key, defaultValue) {
+  if(!(key in obj)) {
+    obj[key] = defaultValue
+  }
+  return obj[key]
+}
+
 async function main() {
 
   const waitingUsers = []
   const serverQueue = createServerQueue(config)
   const serversInUse = []
   const matchUsers = 3
+  const experiments = {}
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
@@ -23,8 +32,20 @@ async function main() {
   app.post('/experiment/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const data = req.body
-    console.log(experimentId)
-    console.log(data.servers)
+    exp = getValue(experiments, experimentId, { 'servers': {} })
+    data.urls.map(s => {
+      return new URL(s)
+    }).forEach(u => {
+      expUrls = getValue(exp.servers, u.hostname, [])
+      if(expUrls.includes(u)) {
+        return
+      } else {
+        expUrls.push(u)
+      }
+    })
+
+    //console.log(JSON.stringify(experiments, null, 2))
+
     res.status(201).json({ message: 'Data received successfully' });
   })
 
