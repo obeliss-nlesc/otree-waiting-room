@@ -17,13 +17,25 @@ function getValue(obj, key, defaultValue) {
   return obj[key]
 }
 
+function findUrls(exp, minUrls) {
+  keys = Object.keys(exp.servers).filter(k => {
+    return (exp.servers[k].length >= minUrls)
+  })
+  if(keys.length > 0) {
+    urls = exp.servers[keys[0]].splice(0, minUrls)
+    return {
+      server: keys[0],
+      urls: urls
+    }
+  }
+  return null
+}
+
 async function main() {
 
-  const waitingUsers = []
-  const serverQueue = createServerQueue(config)
-  const serversInUse = []
   const matchUsers = 3
   const experiments = {}
+  const sockets = {}
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
@@ -46,14 +58,19 @@ async function main() {
 
     //console.log(JSON.stringify(experiments, null, 2))
 
-    res.status(201).json({ message: 'Data received successfully' });
+    res.status(201).json({ message: 'Data received successfully.' });
+  })
+
+  app.delete('/experiment/:experimentId', (req, res) => {
+    queue.deleteQueue(experimentId).then(() => {
+      res.status(201).json({message: `Queue ${experimentId} deleted.`})
+    })
   })
 
   // Serve the HTML page
   app.get('/experiment/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const userId = req.query.userId
-    //await queue.deleteQueue(experimentId)
     res.render(__dirname + '/index.html', {
         "experimentId": experimentId,
         "userId": userId
@@ -64,9 +81,22 @@ async function main() {
     socket.on('newUser', async (msg) => {
       userId = msg.userId
       experimentId = msg.experimentId
+      // Save socket
+      sockets[userId] = socket
       console.log(`User ${userId} connected for experiment ${experimentId}.`);
       queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
-      console.log(queuedUsers)
+
+      // Check if there are enough users to start the game
+      if (queuedUsers.length >= matchUsers) {
+        const gameUsers = await queue.pop(experimentId, matchUsers)
+        expUrls = findUrls(experiments[experimentId], matchUsers)
+        if(expUrls){
+          console.log("Starting game!")
+          startGame(gameUsers, expUrls.urls);
+        } else {
+          console.log("No servers found!")
+        }
+      }
     })
 
     // Handle disconnection
@@ -75,11 +105,6 @@ async function main() {
       //removeFromQueue(socket);
     });
 
-    // Check if there are enough users to start the game
-    if (waitingUsers.length >= matchUsers) {
-      const gameUsers = waitingUsers.splice(0, matchUsers);
-      startGame(gameUsers);
-    }
   });
 
   // Function to remove a user from the waiting queue
@@ -91,24 +116,15 @@ async function main() {
   }
 
   // Function to start the game with the specified users
-  function startGame(users) {
-    console.log('Starting game with users:', users.map(user => user.socket.id));
-    // Implement your game logic here
-
-    // Emit a custom event to redirect users to the game room
-    users.forEach((user) => {
-      user.socket.emit('gameStart', { room: user.url }); // Emit a custom event with the game room URL
-    });
-  }
-
-  function createServerQueue(config) {
-    allExp = config.servers.map(server => {
-      return server.experiments
-    })
-    allUrls = allExp.map(exp => {
-      return exp[0]['urls']
-    })
-    return [].concat(...allUrls)
+  function startGame(users, urls) {
+    console.log(`Starting game with users: ${users} and urls ${urls}.`);
+    for (let i = 0; i < users.length; i++) {
+      user = users[i]
+      expUrl = urls[i]
+      sock = sockets[user]
+      // Emit a custom event with the game room URL
+      sock.emit('gameStart', { room: expUrl }); 
+    }
   }
 
   // Start the server
