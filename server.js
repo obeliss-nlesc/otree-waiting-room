@@ -1,5 +1,6 @@
 const express = require('express')
 const http = require('http')
+const axios = require('axios')
 const url = require('url')
 const socketIO = require('socket.io')
 const app = express()
@@ -41,34 +42,59 @@ async function main() {
   app.use(express.json());
 
   // Setup experiment server urls
-  app.post('/experiment/:experimentId', async (req, res) => {
+  app.post('/api/experiment/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const data = req.body
     exp = getValue(experiments, experimentId, { 'servers': {} })
-    data.urls.map(s => {
-      return new URL(s)
-    }).forEach(u => {
-      expUrls = getValue(exp.servers, u.hostname, [])
-      if(expUrls.includes(u)) {
-        return
-      } else {
-        expUrls.push(u)
+
+    data.servers.forEach(s => { 
+      const config = {
+        headers: {
+          'otree-rest-key': s['otree-rest-key']
+        }
       }
+      const apiUrl = `http://${s.hostname}:${s.port}/api/sessions`
+      const expUrls = getValue(exp.servers, s.hostname, [])
+      // Query server for sessions
+      axios.get(apiUrl, config)
+        .then(res => {
+          //console.log(res.data)
+          res.data.forEach(session => {
+            const code = session.code
+            const expName = session.config_name
+            const sessionUrl = apiUrl + '/' + code
+            // Query sessions for participants
+            axios.get(sessionUrl, config)
+              .then(res => {
+                //console.log(res.data)
+                res.data.participants.forEach(p => {
+                  console.log(`Particpant ${p.code} in experiment ${expName} session ${code} on server ${s.hostname}.`)
+                  expUrls.push(`http://${s.hostname}:${s.port}/InitializeParticipant/${p.code}`)
+                })
+              })
+              .catch(error => {
+                console.error(error)
+              })
+          })
+        })
+        .catch(error => {
+          console.error(error)
+        })
     })
-
-    //console.log(JSON.stringify(experiments, null, 2))
-
-    res.status(201).json({ message: 'Data received successfully.' });
+    res.status(201).json({ message: 'Data received successfully.' })
   })
 
-  app.delete('/experiment/:experimentId', (req, res) => {
+  app.delete('/api/experiments/:experimentId', (req, res) => {
     queue.deleteQueue(experimentId).then(() => {
       res.status(201).json({message: `Queue ${experimentId} deleted.`})
     })
   })
 
-  // Serve the HTML page
-  app.get('/experiment/:experimentId', async (req, res) => {
+  app.get('/api/experiments', async (req, res) => {
+    res.status(201).json(experiments)
+  })
+
+  app.get('/api/experiments/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const userId = req.query.userId
     res.render(__dirname + '/index.html', {
