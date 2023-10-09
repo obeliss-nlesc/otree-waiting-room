@@ -6,10 +6,13 @@ const socketIO = require('socket.io')
 const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
+const fs = require('fs')
 const queue = require('./redis-queue.js')
 const db = require('./postgres-db')
 
-const config = require('./config.json')
+require('dotenv').config();
+const otreeIPs = process.env.OTREE_IPS.split(",")
+const otreeRestKey = process.env.OTREE_REST_KEY
 const port = 8060
 
 function getValue(obj, key, defaultValue) {
@@ -91,31 +94,32 @@ async function main() {
   app.post('/api/experiments/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const data = req.body
-    
     exp = getValue(experiments, experimentId, { 'servers': {} })
-    data.servers.forEach(s => { 
+    
+    experiments[experimentId]['config'] = data
+    otreeIPs.forEach(s => {
       const config = {
         headers: {
-          'otree-rest-key': s['otree-rest-key']
+          'otree-rest-key': otreeRestKey
         }
       }
-      const apiUrl = `http://${s.hostname}:${s.port}/api/sessions`
-      const expUrls = getValue(exp.servers, s.hostname, [])
-      // Query server for sessions
+      const apiUrl = `http://${s}/api/sessions`
+      const expUrls = getValue(exp.servers, s, [])
       axios.get(apiUrl, config)
         .then(res => {
-          //console.log(res.data)
           res.data.forEach(session => {
             const code = session.code
             const expName = session.config_name
+            if(expName != experimentId) {
+              return
+            }
             const sessionUrl = apiUrl + '/' + code
             // Query sessions for participants
             axios.get(sessionUrl, config)
               .then(res => {
-                //console.log(res.data)
                 res.data.participants.forEach(p => {
-                  console.log(`Particpant ${p.code} in experiment ${expName} session ${code} on server ${s.hostname}.`)
-                  expUrls.push(`http://${s.hostname}:${s.port}/InitializeParticipant/${p.code}`)
+                  //console.log(`Particpant ${p.code} in experiment ${expName} session ${code} on server ${s}.`)
+                  expUrls.push(`http://${s}/InitializeParticipant/${p.code}`)
                 })
               })
               .catch(error => {
@@ -127,7 +131,13 @@ async function main() {
           console.error(error)
         })
     })
-    res.status(201).json({ message: 'Data received successfully.' })
+    
+    res.status(201).json({ message: "Ok"})
+  })
+
+  app.get('/api/experiments/:experimentId', async (req, res) => {
+    const experimentId = req.params.experimentId
+    res.status(201).json(experiments[experimentId])
   })
 
   app.delete('/api/experiments/:experimentId', (req, res) => {
@@ -140,13 +150,20 @@ async function main() {
     res.status(201).json(experiments)
   })
 
-  app.get('/api/experiments/:experimentId', async (req, res) => {
+  app.get('/room/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const userId = req.query.userId
-    res.render(__dirname + '/index.html', {
-        "experimentId": experimentId,
-        "userId": userId
-      });
+    if (fs.existsSync(__dirname + "/" + experimentId)) {
+      res.render(__dirname + '/' + experimentId + '/index.html', {
+          "experimentId": experimentId,
+          "userId": userId
+        });
+    } else {
+      res.render(__dirname + '/default/index.html', {
+          "experimentId": experimentId,
+          "userId": userId
+        });
+    }
   });
 
   io.on('connection', (socket) => {
