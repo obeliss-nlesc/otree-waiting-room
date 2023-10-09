@@ -150,7 +150,7 @@ async function main() {
     res.status(201).json(experiments)
   })
 
-  app.get('/start/:experimentId', async (req, res) => {
+  app.get('/room/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     const userId = req.query.userId
     if (fs.existsSync(__dirname + "/" + experimentId)) {
