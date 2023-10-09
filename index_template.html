@@ -6,7 +6,9 @@
 
 <body>
   <div class="w3-container w3-gray">
-    <p>In het gevangen dillema spel speelt u samen met 1 ander panellid. U wordt steeds gevraagd om een keuze te maken tussen samenwerken of tegenwerken. In totaal speelt u 10 rondes. Tijdens deze rondes veranderen er soms dingen, dit krijgt u steeds aan het begin van de ronde te zien.</p>
+    <p>
+    <%= headerText %>
+    </p>
   </div>
   <div class="w3-row">
     <div class="w3-col w3-container m4 l3 w3-yellow w3-padding">
@@ -17,15 +19,15 @@
         </tr>
         <tr>
           <td>Meedoen</td>
-          <td>0,25</td>
+          <td> <%= meedoenValue %></td>
         </tr>
         <tr>
           <td>Afronden</td>
-          <td>2</td>
+          <td> <%= afrondenValue %></td>
         </tr>
         <tr>
           <td>Bonus</td>
-          <td>0-2</td>
+          <td> <%= bonusValue %></td>
         </tr>
       </table>
     </div>
