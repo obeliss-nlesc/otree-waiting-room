@@ -46,6 +46,7 @@ async function main() {
   const experiments = {}
   const sockets = {}
   const userMapping = {}
+  const agreementIds = {}
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
@@ -151,18 +152,12 @@ async function main() {
   })
 
   app.get('/room/:experimentId', async (req, res) => {
-    const experimentId = req.params.experimentId
-    const userId = req.query.userId
-    if (fs.existsSync(__dirname + "/" + experimentId)) {
-      res.render(__dirname + '/' + experimentId + '/index.html', {
-          "experimentId": experimentId,
-          "userId": userId
-        });
+    const params = req.query
+    params.experimentId = req.params.experimentId
+    if (fs.existsSync(__dirname + "/" + params.experimentId)) {
+      res.render(__dirname + '/' + params.experimentId + '/index.html', params);
     } else {
-      res.render(__dirname + '/default/index.html', {
-          "experimentId": experimentId,
-          "userId": userId
-        });
+      res.render(__dirname + '/default/index_template.html', params);
     }
   });
 
@@ -179,11 +174,53 @@ async function main() {
       if (queuedUsers.length >= matchUsers) {
         const gameUsers = await queue.pop(experimentId, matchUsers)
         expUrls = findUrls(experiments[experimentId], matchUsers)
-        if(expUrls){
-          console.log("Starting game!")
-          startGame(gameUsers, expUrls.urls);
-        } else {
-          console.log("No servers found!")
+        console.log("Enough users; waiting for agreement.")
+        const uuid = crypto.randomUUID();
+        agreementIds[uuid] = {
+          experimentId: experimentId,
+          users: gameUsers,
+          count: gameUsers.length,
+          agreedUsers: [],
+          urls: expUrls.urls
+        }
+        //agreeGame(gameUsers, expUrls.urls);
+        agreeGame(gameUsers, uuid);
+      } else {
+        const playersToWaitFor = matchUsers - queuedUsers.length;
+        socket.emit("wait", { 
+          playersToWaitFor: playersToWaitFor, 
+          maxPlayers: matchUsers
+        })
+        queuedUsers.forEach(user => {
+          sock = sockets[user]
+          if (!sock) {
+            return
+          }
+          sock.emit('queueUpdate',{
+            playersToWaitFor: playersToWaitFor, 
+            maxPlayers: matchUsers
+          })
+        })
+      }//else
+    })//newUser
+
+    // User sends agreement to start game
+    socket.on('userAgreed', (data) => {
+      console.log("[SOCKET][userAgreed] ", data)
+      const userId = data.userId
+      const uuid = data.uuid
+
+      agreement = agreementIds[uuid]
+      if(!agreement) {
+        console.log(`[ERROR] no agreement ${uuid}`)
+        return
+      }
+      if(!agreement.agreedUsers.includes(userId)){
+        agreement.count -= 1
+        agreement.agreedUsers.push(userId)
+        if(agreement.count == 0){
+          console.log("Start Game!")
+          startGame(agreement.agreedUsers, agreement.urls)
         }
       }
     })
@@ -194,6 +231,19 @@ async function main() {
     });
 
   });
+
+  // Send agree event which will force users to agree before
+  // starting the game.
+  function agreeGame(users, uuid) {
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i]
+      const sock = sockets[user]
+      if(!sock) {
+        return
+      }
+      sock.emit('agree', {uuid: uuid}); 
+    }
+  }
 
   // Function to start the game with the specified users
   function startGame(users, urls) {
