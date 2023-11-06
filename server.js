@@ -9,6 +9,7 @@ const io = socketIO(server)
 const fs = require('fs')
 const queue = require('./redis-queue.js')
 const db = require('./postgres-db')
+const User = require('./user.js')
 
 require('dotenv').config();
 const otreeIPs = process.env.OTREE_IPS.split(",")
@@ -41,6 +42,12 @@ function lastElement(arr) {
 }
 
 async function main() {
+  const user1 = new User('john')
+  user1.addListenerForState('startedPage', function(user, state) {
+    console.log(`user ${user} fired ${state}`)
+  })
+
+  user1.changeState('startedPage')
 
   const matchUsers = 3
   const experiments = {}
