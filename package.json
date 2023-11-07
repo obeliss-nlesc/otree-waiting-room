@@ -19,5 +19,8 @@
     "pg": "^8.11.3",
     "pg-promise": "^11.5.4",
     "socket.io": "^4.7.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.53.0"
   }
 }

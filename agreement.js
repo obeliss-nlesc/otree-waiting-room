@@ -12,6 +12,9 @@ class Agreement {
 
   startTimeout(fn) {
     setTimeout(() => {
+      if (this.isAgreed()) {
+        return
+      }
       console.log(`Agreement ${this.agreementId} timeout!`)
       const nonAgreedUsers = this.users.filter(user => {
         return (!this.agreedUsers.includes(user))
@@ -57,6 +60,4 @@ class Agreement {
 
 }  
 
-
 module.exports = Agreement
-
