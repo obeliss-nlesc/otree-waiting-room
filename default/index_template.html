@@ -92,8 +92,24 @@
     const experimentId = '<%= experimentId %>';
     const userId = '<%= userId %>';
     let uuid = null;
+    let myState = 'new';
     // Connect to the WebSocket server
     const socket = io();
+    const agreeButton = document.getElementById('agreeButton');
+    agreeButton.addEventListener('click', function() {
+      console.log(`agreeButton clicked: agreement uuid ${uuid}`);
+      // User sends agreement to start game.
+      socket.emit("userAgreed", {
+        'experimentId': experimentId,
+        'userId': userId,
+        'uuid': uuid
+      })
+      hideDiv("startDiv")
+      hideDiv("tableDiv")
+      hideDiv("waitDiv")
+      hideDiv("agreeDiv")
+      showDiv("loaderDiv")
+    })
     function hideDiv(id) {
       const div = document.getElementById(id)
       if(!div) {
@@ -114,15 +130,20 @@
     }
     // Handle connection established
     socket.on('connect', () => {
+      console.log(`[EVENT] connect`)
       const startButton = document.getElementById('startButton');
       if (startButton.classList.contains('w3-disabled')) {
         startButton.classList.remove('w3-disabled');
       }
+      socket.emit("landingPage", {
+        'experimentId': experimentId,
+        'userId': userId
+      })
+      myState = 'startedPage'
       console.log('Connected to server');
     });
     const startButton = document.getElementById('startButton');
     startButton.addEventListener('click', function() {
-      console.log("startButton clicked.");
       socket.emit("newUser", {
         'experimentId': experimentId,
         'userId': userId
@@ -132,11 +153,27 @@
     // Server instrcuts us to wait for more players.
     // Server passes the number of players we are waiting for.
     socket.on('wait', (data) => {
+      console.log('[SOCKET][wait] ', data)
       document.getElementById('playersToWaitFor').innerText = data.playersToWaitFor
       document.getElementById('maxPlayers').innerText = data.maxPlayers
       hideDiv("startDiv")
       hideDiv("tableDiv")
+      hideDiv("agreeDiv")
+      hideDiv("loaderDiv")
       showDiv("waitDiv")
+      uuid = null;
+      myState = 'queued'
+    })
+
+    socket.on('reset', (data) => {
+      console.log('[SOCKET][reset] ', data)
+      hideDiv("agreeDiv")
+      hideDiv("loaderDiv")
+      hideDiv("waitDiv")
+      showDiv("startDiv")
+      showDiv("tableDiv")
+      uuid = null;
+      myState = "startedPage";
     })
     
     // Update from server about the number of waiting players
@@ -148,22 +185,8 @@
 
     // Wait for players to agree to start
     socket.on('agree', (data) => {
+      uuid = data.uuid;
       console.log('[SOCKET][agree] ', data)
-      const agreeButton = document.getElementById('agreeButton');
-      agreeButton.addEventListener('click', function() {
-        console.log("agreeButton clicked.");
-        // User sends agreement to start game.
-        socket.emit("userAgreed", {
-          'experimentId': experimentId,
-          'userId': userId,
-          'uuid': data.uuid
-        })
-        hideDiv("startDiv")
-        hideDiv("tableDiv")
-        hideDiv("waitDiv")
-        hideDiv("agreeDiv")
-        showDiv("loaderDiv")
-      })
       hideDiv("startDiv")
       hideDiv("tableDiv")
       hideDiv("waitDiv")

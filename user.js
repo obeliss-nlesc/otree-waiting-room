@@ -1,15 +1,19 @@
 class User {
-  constructor(name) {
-    this.name = name;
-    this.state = 'new'; // Initial state is 'active'
+  constructor(userId, experimentId) {
+    this.userId = userId;
+    this.experimentId = experimentId
+    this.oTreeId = null;
+    this.redirectedUrl = null;
+    this.state = 'new';
     this.listeners = [];
+    this.webSocket = null;
   }
   
   // DFA transition table
   transitionTable = {
     'new': ['startedPage'],
     'startedPage': ['queued', 'dropedout'],
-    'queued': ['agreed', 'dropedout'],
+    'queued': ['queued', 'agreed', 'dropedout'],
     'agreed': ['redirected', 'timedOut', 'queued', 'dropedout'],
     'redirected': ["inoTreePages", "dropedout" ],
     'inoTreePages': ["inoTreePages", "oTreeCompleted", "oTreeDropedout" ],
@@ -18,6 +22,14 @@ class User {
     'oTreeDropedout': ["allowedBack", "nonAllowedBack"],
     'dropedout': ["allowedBack", "nonAllowedBack"],
   };
+
+  reset() {
+    this.state = 'startedPage'
+    this.listeners = []
+    this.redirectedUrl = null
+    this.oTreeId = null
+    this.webSocket.emit('reset', {})
+  }
 
   // Add a listener for a specific state change
   addListenerForState(state, listener) {
@@ -41,7 +53,7 @@ class User {
   notifyListeners(newState) {
     if (this.listeners[newState]) {
       this.listeners[newState].forEach(listener => {
-        listener(this.name, newState);
+        listener(this, newState);
       });
     }
   }
@@ -52,7 +64,7 @@ class User {
     if (this.transitionTable[this.state] && this.transitionTable[this.state].includes(action)) {
       // Valid transition
       this.state = action;
-      console.log(`${this.name}'s state has been changed to ${this.state}`);
+      console.log(`${this.userId}'s state has been changed to ${this.state}`);
       this.notifyListeners(this.state); // Notify listeners about the state change
     } else {
       console.log('Invalid state transition. State not changed.');

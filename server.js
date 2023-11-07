@@ -10,6 +10,7 @@ const fs = require('fs')
 const queue = require('./redis-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
+const Agreement = require('./agreement.js')
 
 require('dotenv').config();
 const otreeIPs = process.env.OTREE_IPS.split(",")
@@ -37,21 +38,24 @@ function findUrls(exp, minUrls) {
   return null
 }
 
+function revertUrls(urls, serverKey) {
+  urls.forEach(url => {
+    if (exp.servers[serverKey].includes(url)) {
+      return
+    }
+    exp.servers[serverKey].push(url)
+  })
+}
+
 function lastElement(arr) {
   return arr[arr.length -1]
 }
 
 async function main() {
-  const user1 = new User('john')
-  user1.addListenerForState('startedPage', function(user, state) {
-    console.log(`user ${user} fired ${state}`)
-  })
-
-  user1.changeState('startedPage')
-
   const matchUsers = 3
   const experiments = {}
-  const sockets = {}
+  //const sockets = {}
+  const usersDb = {}
   const userMapping = {}
   const agreementIds = {}
 
@@ -105,6 +109,9 @@ async function main() {
     exp = getValue(experiments, experimentId, { 'servers': {} })
     
     experiments[experimentId]['config'] = data
+    // Delete queue for experiment
+    queue.deleteQueue(experimentId)
+
     otreeIPs.forEach(s => {
       const config = {
         headers: {
@@ -169,46 +176,106 @@ async function main() {
   });
 
   io.on('connection', (socket) => {
-    socket.on('newUser', async (msg) => {
-      userId = msg.userId
-      experimentId = msg.experimentId
-      // Save socket
-      sockets[userId] = socket
+    socket.on('landingPage', async (msg) => {
+      const userId = msg.userId
+      const experimentId = msg.experimentId
+      const user = usersDb[userId] || new User(userId, experimentId)
+      user.webSocket = socket
+      // If user is queued an refreshes page then re-trigger
+      // queued events.
+      if (user.state == 'queued') {
+        console.log(`User ${userId} already in state ${user.state}.`)
+        user.changeState('queued');
+        return
+      }
+      user.changeState('startedPage')
+      user.reset()
+      usersDb[userId] = user
       console.log(`User ${userId} connected for experiment ${experimentId}.`);
-      queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
+    })
+    socket.on('newUser', async (msg) => {
+      let userId = msg.userId
+      let experimentId = msg.experimentId
+      let user = usersDb[userId]
 
-      // Check if there are enough users to start the game
-      if (queuedUsers.length >= matchUsers) {
-        const gameUsers = await queue.pop(experimentId, matchUsers)
-        expUrls = findUrls(experiments[experimentId], matchUsers)
-        console.log("Enough users; waiting for agreement.")
-        const uuid = crypto.randomUUID();
-        agreementIds[uuid] = {
-          experimentId: experimentId,
-          users: gameUsers,
-          count: gameUsers.length,
-          agreedUsers: [],
-          urls: expUrls.urls
-        }
-        //agreeGame(gameUsers, expUrls.urls);
-        agreeGame(gameUsers, uuid);
-      } else {
-        const playersToWaitFor = matchUsers - queuedUsers.length;
-        socket.emit("wait", { 
-          playersToWaitFor: playersToWaitFor, 
-          maxPlayers: matchUsers
+      if (!user) {
+        console.error(`No user ${userId} found!`)
+        return
+      }
+      user.webSocket = socket
+      if (user.state == "queued") {
+        console.log(`User ${userId} already queued`)
+        return
+      }
+
+      user.addListenerForState("queued", async (user, state) => {
+        let userId = user.userId
+        let experimentId = user.experimentId
+        let queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
+
+        console.log(`User ${userId} in event listener`)
+
+        // Check if there are enough users to start the game
+        if (queuedUsers.length >= matchUsers) {
+          const gameUsers = await queue.pop(experimentId, matchUsers)
+          expUrls = findUrls(experiments[experimentId], matchUsers)
+          console.log("Enough users; waiting for agreement.")
+          const uuid = crypto.randomUUID();
+          agreement = new Agreement(uuid, 
+            experimentId,
+            gameUsers,
+            expUrls.urls,
+            expUrls.server
+          )
+          agreementIds[uuid] = agreement;
+          agreeGame(gameUsers, uuid);
+          // Agreement timeout function
+          agreement.startTimeout((agreement, agreedUsers, nonAgreedUsers) => {
+            if (agreement.isAgreed()) {
+              return
+            }
+            if (agreement.isBroken()){
+              revertUrls(agreement.urls, agreement.server)
+              agreedUsers.forEach(userId => {
+                user = usersDb[userId]
+                user.changeState('queued')
+              })
+              nonAgreedUsers.forEach(userId => {
+                user = usersDb[userId]
+                user.reset()
+              })
+            }
         })
-        queuedUsers.forEach(user => {
-          sock = sockets[user]
-          if (!sock) {
-            return
-          }
-          sock.emit('queueUpdate',{
+        } else {
+          queuedUsers = await queue.getQueue(experimentId)
+          let playersToWaitFor = matchUsers - queuedUsers.length;
+          user.webSocket.emit("wait", { 
             playersToWaitFor: playersToWaitFor, 
             maxPlayers: matchUsers
           })
-        })
-      }//else
+          setInterval(async ()=> {
+          queuedUsers = await queue.getQueue(experimentId)
+          let playersToWaitFor = matchUsers - queuedUsers.length;
+          queuedUsers.forEach(userId => {
+            user = usersDb[userId]
+            if (!user) {
+              console.error(`User ${userId} not found!`)
+              return
+            }
+            sock = user.webSocket
+            if (!sock) {
+              console.error(`Socket for ${userId} not found!`)
+              return
+            }
+            sock.emit('queueUpdate',{
+              playersToWaitFor: playersToWaitFor, 
+              maxPlayers: matchUsers
+            })
+          })
+          }, 1000)
+        }//else
+      })//addListenerForState
+      user.changeState("queued");
     })//newUser
 
     // User sends agreement to start game
@@ -222,14 +289,18 @@ async function main() {
         console.log(`[ERROR] no agreement ${uuid}`)
         return
       }
-      if(!agreement.agreedUsers.includes(userId)){
+      if(agreement.agree(userId)) {
+        console.log("Start Game!")
+        startGame(agreement.agreedUsers, agreement.urls)
+      }
+      /*if(!agreement.agreedUsers.includes(userId)){
         agreement.count -= 1
         agreement.agreedUsers.push(userId)
         if(agreement.count == 0){
           console.log("Start Game!")
           startGame(agreement.agreedUsers, agreement.urls)
         }
-      }
+      }*/
     })
 
     // Handle disconnection
@@ -243,9 +314,11 @@ async function main() {
   // starting the game.
   function agreeGame(users, uuid) {
     for (let i = 0; i < users.length; i++) {
-      const user = users[i]
-      const sock = sockets[user]
+      const userId = users[i]
+      const user = usersDb[userId]
+      const sock = user.webSocket
       if(!sock) {
+        console.error(`User ${userId} has not socket!`);
         return
       }
       sock.emit('agree', {uuid: uuid}); 
@@ -256,10 +329,11 @@ async function main() {
   function startGame(users, urls) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`);
     for (let i = 0; i < users.length; i++) {
-      const user = users[i]
+      const userId = users[i]
+      const user = usersDb[userId]
       const expUrl = urls[i]
-      userMapping[user] = expUrl
-      const sock = sockets[user]
+      userMapping[userId] = expUrl
+      const sock = user.webSocket
       // Emit a custom event with the game room URL
       sock.emit('gameStart', { room: expUrl }); 
     }
