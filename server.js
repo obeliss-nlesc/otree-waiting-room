@@ -221,14 +221,14 @@ async function main() {
           expUrls = findUrls(experiments[experimentId], matchUsers)
           console.log("Enough users; waiting for agreement.")
           const uuid = crypto.randomUUID();
-          agreement = new Agreement(uuid, 
+          const agreement = new Agreement(uuid, 
             experimentId,
             gameUsers,
             expUrls.urls,
             expUrls.server
           )
           agreementIds[uuid] = agreement;
-          agreeGame(gameUsers, uuid);
+          agreeGame(gameUsers, uuid, agreement);
           // Agreement timeout function
           agreement.startTimeout((agreement, agreedUsers, nonAgreedUsers) => {
             if (agreement.isAgreed()) {
@@ -247,15 +247,12 @@ async function main() {
             }
         })
         } else {
-          queuedUsers = await queue.getQueue(experimentId)
+          let queuedUsers = await queue.getQueue(experimentId)
           let playersToWaitFor = matchUsers - queuedUsers.length;
           user.webSocket.emit("wait", { 
             playersToWaitFor: playersToWaitFor, 
             maxPlayers: matchUsers
           })
-          setInterval(async ()=> {
-          queuedUsers = await queue.getQueue(experimentId)
-          let playersToWaitFor = matchUsers - queuedUsers.length;
           queuedUsers.forEach(userId => {
             user = usersDb[userId]
             if (!user) {
@@ -272,7 +269,6 @@ async function main() {
               maxPlayers: matchUsers
             })
           })
-          }, 1000)
         }//else
       })//addListenerForState
       user.changeState("queued");
@@ -289,18 +285,11 @@ async function main() {
         console.log(`[ERROR] no agreement ${uuid}`)
         return
       }
+      // If everyone agrees, start game
       if(agreement.agree(userId)) {
         console.log("Start Game!")
         startGame(agreement.agreedUsers, agreement.urls)
       }
-      /*if(!agreement.agreedUsers.includes(userId)){
-        agreement.count -= 1
-        agreement.agreedUsers.push(userId)
-        if(agreement.count == 0){
-          console.log("Start Game!")
-          startGame(agreement.agreedUsers, agreement.urls)
-        }
-      }*/
     })
 
     // Handle disconnection
@@ -312,7 +301,7 @@ async function main() {
 
   // Send agree event which will force users to agree before
   // starting the game.
-  function agreeGame(users, uuid) {
+  function agreeGame(users, uuid, agreement) {
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
       const user = usersDb[userId]
@@ -321,7 +310,7 @@ async function main() {
         console.error(`User ${userId} has not socket!`);
         return
       }
-      sock.emit('agree', {uuid: uuid}); 
+      sock.emit('agree', {uuid: uuid, timeout: agreement.timeout}); 
     }
   }
 
