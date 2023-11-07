@@ -60,7 +60,6 @@ class User {
 
   // Method to change the state
   changeState(action) {
-    const oldState = this.state;
     if (this.transitionTable[this.state] && this.transitionTable[this.state].includes(action)) {
       // Valid transition
       this.state = action;
@@ -73,4 +72,3 @@ class User {
 }
 
 module.exports = User
-
