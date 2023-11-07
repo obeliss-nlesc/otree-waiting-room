@@ -58,9 +58,9 @@ function getIps(containers, name) {
 
 getContainersInfo()
   .then(containers => {
-    postgresIps = getIps(containers, "postgres")
-    redisIp = getIps(containers, "redis")
-    otreeIps = getIps(containers, "otree")
+    const postgresIps = getIps(containers, "postgres")
+    const redisIp = getIps(containers, "redis")
+    const otreeIps = getIps(containers, "otree")
     console.log(`POSTGRES_IPS=${postgresIps}`)
     console.log(`REDIS_HOST=${redisIp}`)
     console.log(`OTREE_IPS=${otreeIps}`)
