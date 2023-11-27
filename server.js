@@ -8,6 +8,7 @@ const server = http.createServer(app)
 const io = socketIO(server)
 const fs = require('fs')
 const jwt = require('jsonwebtoken')
+const CryptoJS = require('crypto-js')
 const queue = require('./redis-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
@@ -17,6 +18,7 @@ const Agreement = require('./agreement.js')
 require('dotenv').config();
 const otreeIPs = process.env.OTREE_IPS.split(",")
 const otreeRestKey = process.env.OTREE_REST_KEY
+const apiKey = process.env.API_KEY
 const port = 8060
 const publicKey = fs.readFileSync('./public-key.pem', 'utf8')
 
@@ -155,6 +157,22 @@ async function main() {
     res.status(201).json({ message: "Ok"})
   })
 
+  // Middleware to validate JWT
+  const validateToken = (req, res, next) => {
+    const token = req.headers.authorization;
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized: Missing token' });
+    }
+    jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decoded) => {
+      if (err) {
+              return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+            }
+
+      req.user = decoded; // Attach user information to the request object
+      next();
+    });
+  };
+
   app.get('/api/experiments/:experimentId', async (req, res) => {
     const experimentId = req.params.experimentId
     res.status(201).json(experiments[experimentId])
@@ -168,30 +186,42 @@ async function main() {
   })
 
   app.get('/api/experiments', async (req, res) => {
+    console.log('HEADERS: ', req.headers)
+    const xSignature = req.headers['x-signature']
+    console.log(apiKey)
+    const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
+    const dataToVerify = JSON.stringify(req.body)
+    console.log(dataToVerify)
+    const dataWordArray = CryptoJS.enc.Utf8.parse(dataToVerify);
+    const calculatedSignatureWordArray = CryptoJS.HmacSHA256(dataWordArray, keyWordArray);
+    const calculatedSignatureBase64 = CryptoJS.enc.Base64.stringify(calculatedSignatureWordArray);
+    if(calculatedSignatureBase64 == xSignature) {
+      console.log('MATCH')
+    } else {
+      console.log(xSignature)
+      console.log(calculatedSignatureBase64)
+    }
+
+
     res.status(201).json(experiments)
   })
 
   app.get('/room/:experimentId', async (req, res) => {
-    const params = req.query
-    const token = params.token
-
-    console.log("token: ", token)
-    console.log("params: ", params)
-
+    const token = req.query.token
     jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decodedToken) => {
       if (err){
         console.error('JWT failed!')
+        return
       } else{
-        console.log(decodedToken)
+        const params = decodedToken
+        params.experimentId = req.params.experimentId
+        if (fs.existsSync(__dirname + "/" + params.experimentId)) {
+          res.render(__dirname + '/' + params.experimentId + '/index.html', params);
+        } else {
+          res.render(__dirname + '/default/index_template.html', params);
+        }
       }
     })
-
-    params.experimentId = req.params.experimentId
-    if (fs.existsSync(__dirname + "/" + params.experimentId)) {
-      res.render(__dirname + '/' + params.experimentId + '/index.html', params);
-    } else {
-      res.render(__dirname + '/default/index_template.html', params);
-    }
   });
 
   io.on('connection', (socket) => {
