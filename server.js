@@ -75,7 +75,7 @@ const validateSignature = (req, res, next) => {
 
 // Middleware to validate JWT
 const validateToken = (req, res, next) => {
-  const token = req.headers.authorization;
+  const token = req.query.token;
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: Missing token' });
   }
@@ -207,22 +207,14 @@ async function main() {
     res.status(201).json(experiments)
   })
 
-  app.get('/room/:experimentId', validateSignature, async (req, res) => {
-    const token = req.query.token
-    jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decodedToken) => {
-      if (err){
-        console.error('JWT failed!')
-        return
-      } else{
-        const params = decodedToken
-        params.experimentId = req.params.experimentId
-        if (fs.existsSync(__dirname + "/" + params.experimentId)) {
-          res.render(__dirname + '/' + params.experimentId + '/index.html', params);
-        } else {
-          res.render(__dirname + '/default/index_template.html', params);
-        }
-      }
-    })
+  app.get('/room/:experimentId', validateToken, async (req, res) => {
+    const params = req.user
+    params.experimentId = req.params.experimentId
+    if (fs.existsSync(__dirname + "/" + params.experimentId)) {
+      res.render(__dirname + '/' + params.experimentId + '/index.html', params);
+    } else {
+      res.render(__dirname + '/default/index_template.html', params);
+    }
   });
 
   io.on('connection', (socket) => {
