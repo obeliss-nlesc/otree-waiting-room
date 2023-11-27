@@ -19,6 +19,7 @@ require('dotenv').config();
 const otreeIPs = process.env.OTREE_IPS.split(",")
 const otreeRestKey = process.env.OTREE_REST_KEY
 const apiKey = process.env.API_KEY
+const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = 8060
 const publicKey = fs.readFileSync('./public-key.pem', 'utf8')
 
@@ -58,6 +59,36 @@ function revertUrls(exp, urls, serverKey) {
 function lastElement(arr) {
   return arr[arr.length -1]
 }
+// Middleware to validate signature
+const validateSignature = (req, res, next) => {
+  const xSignature = req.headers['x-signature']
+  const dataToVerify = JSON.stringify(req.body);
+  const dataWordArray = CryptoJS.enc.Utf8.parse(dataToVerify);
+  const calculatedSignatureWordArray = CryptoJS.HmacSHA256(dataWordArray, keyWordArray);
+  const calculatedSignatureBase64 = CryptoJS.enc.Base64.stringify(calculatedSignatureWordArray);
+  if(calculatedSignatureBase64 == xSignature) {
+    next()
+  } else {
+    res.status(401).json({ message: 'Unauthorized: Invalid signature'})
+  }
+};
+
+// Middleware to validate JWT
+const validateToken = (req, res, next) => {
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized: Missing token' });
+  }
+  jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decoded) => {
+    if (err) {
+            return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+          }
+
+    req.user = decoded; // Attach user information to the request object
+    next();
+  });
+};
+
 
 async function main() {
   const matchUsers = 3
@@ -71,7 +102,7 @@ async function main() {
   app.use(express.json());
 
   // Get participant info
-  app.get('/api/participants/:userId', async (req, res) => {
+  app.get('/api/participants/:userId', validateSignature, async (req, res) => {
     const participantUrl = userMapping[req.params.userId]
     if(!participantUrl) {
       res.status(404).json({message: `${req.params.userId} not found.`})
@@ -97,7 +128,7 @@ async function main() {
   })
   
   // Get all participants info
-  app.get('/api/participants', async (req, res) => {
+  app.get('/api/participants', validateSignature, async (req, res) => {
     const results = await db.parQuery(`SELECT 
       code, 
       _session_code, 
@@ -111,7 +142,7 @@ async function main() {
   })
 
   // Setup experiment server urls
-  app.post('/api/experiments/:experimentId', async (req, res) => {
+  app.post('/api/experiments/:experimentId', validateSignature, async (req, res) => {
     const experimentId = req.params.experimentId
     const data = req.body
     const exp = getValue(experiments, experimentId, { 'servers': {} })
@@ -157,56 +188,26 @@ async function main() {
     res.status(201).json({ message: "Ok"})
   })
 
-  // Middleware to validate JWT
-  const validateToken = (req, res, next) => {
-    const token = req.headers.authorization;
-    if (!token) {
-      return res.status(401).json({ message: 'Unauthorized: Missing token' });
-    }
-    jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decoded) => {
-      if (err) {
-              return res.status(401).json({ message: 'Unauthorized: Invalid token' });
-            }
-
-      req.user = decoded; // Attach user information to the request object
-      next();
-    });
-  };
-
-  app.get('/api/experiments/:experimentId', async (req, res) => {
+  app.get('/api/experiments/:experimentId', validateSignature, async (req, res) => {
     const experimentId = req.params.experimentId
     res.status(201).json(experiments[experimentId])
   })
 
-  app.delete('/api/experiments/:experimentId', (req, res) => {
+  app.delete('/api/experiments/:experimentId', validateSignature, (req, res) => {
     const experimentId = req.params.experimentId
     queue.deleteQueue(experimentId).then(() => {
       res.status(201).json({message: `Queue ${experimentId} deleted.`})
     })
   })
 
-  app.get('/api/experiments', async (req, res) => {
+  app.get('/api/experiments', validateSignature, async (req, res) => {
     console.log('HEADERS: ', req.headers)
-    const xSignature = req.headers['x-signature']
-    console.log(apiKey)
-    const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
-    const dataToVerify = JSON.stringify(req.body)
-    console.log(dataToVerify)
-    const dataWordArray = CryptoJS.enc.Utf8.parse(dataToVerify);
-    const calculatedSignatureWordArray = CryptoJS.HmacSHA256(dataWordArray, keyWordArray);
-    const calculatedSignatureBase64 = CryptoJS.enc.Base64.stringify(calculatedSignatureWordArray);
-    if(calculatedSignatureBase64 == xSignature) {
-      console.log('MATCH')
-    } else {
-      console.log(xSignature)
-      console.log(calculatedSignatureBase64)
-    }
 
 
     res.status(201).json(experiments)
   })
 
-  app.get('/room/:experimentId', async (req, res) => {
+  app.get('/room/:experimentId', validateSignature, async (req, res) => {
     const token = req.query.token
     jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decodedToken) => {
       if (err){
