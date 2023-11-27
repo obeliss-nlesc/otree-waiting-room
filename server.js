@@ -7,15 +7,19 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
 const fs = require('fs')
+const jwt = require('jsonwebtoken')
 const queue = require('./redis-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
 
+
 require('dotenv').config();
 const otreeIPs = process.env.OTREE_IPS.split(",")
 const otreeRestKey = process.env.OTREE_REST_KEY
 const port = 8060
+const publicKey = fs.readFileSync('./public-key.pem', 'utf8')
+
 
 function getValue(obj, key, defaultValue) {
   if(!(key in obj)) {
@@ -169,6 +173,19 @@ async function main() {
 
   app.get('/room/:experimentId', async (req, res) => {
     const params = req.query
+    const token = params.token
+
+    console.log("token: ", token)
+    console.log("params: ", params)
+
+    jwt.verify(token, publicKey, {algorithm: ['RS256']}, (err, decodedToken) => {
+      if (err){
+        console.error('JWT failed!')
+      } else{
+        console.log(decodedToken)
+      }
+    })
+
     params.experimentId = req.params.experimentId
     if (fs.existsSync(__dirname + "/" + params.experimentId)) {
       res.render(__dirname + '/' + params.experimentId + '/index.html', params);
