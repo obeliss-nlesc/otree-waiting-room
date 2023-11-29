@@ -27,6 +27,7 @@ const users = ['user001', 'user002', 'user003']
 const userTokens = users.map(u => {
   const userData = clone(userTemplate)
   userData.userId = u
+  console.log(userData)
   return jwt.sign(userData, privateKey, {algorithm: 'RS256', expiresIn: '1h'})
 })
 
