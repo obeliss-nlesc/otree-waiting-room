@@ -9,7 +9,7 @@ docker run -d Redis
 ## Install dependencies
 To install package dependencies
 ```
-npm Install
+npm install
 ```
 
 ## Setup .env
@@ -38,6 +38,7 @@ Three test user URLs are printed on the command line that can be used to test th
 
 ## API documentation
 API endpoints are documented using Postman and can be found [here](https://documenter.getpostman.com/view/1612141/2s9YeG7Bqm).
+API endpoints have a pre-request script [postman-rest-pre-request-script.js](postman-rest-pre-request-script.js) that is added to all admin endpoints. For the script to run you have to add a Postman environment variable 'apiKey' with the value taken from the .env file generated earlier. 
 
 
 
