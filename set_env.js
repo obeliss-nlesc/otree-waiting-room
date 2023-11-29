@@ -1,4 +1,6 @@
 const Docker = require('node-docker-api').Docker
+const fs = require('fs')
+const crypto = require('crypto')
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' })
 
@@ -6,6 +8,18 @@ const postgresUser="otree_user"
 const postgresPass="password"
 const postgresDb="django_db"
 const otreeRestKey="password"
+const apiKey = getApiKeyFromFile('./api.key') || generateApiKey()
+
+function generateApiKey() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function getApiKeyFromFile(path) {
+  if (!fs.existsSync(path)) {
+    return
+  }
+  return fs.readFileSync(path)
+}
 
 function findKeyValue(obj, keyToFind) {
   const results = [];
@@ -68,6 +82,7 @@ getContainersInfo()
     console.log(`POSTGRES_DB=${postgresDb}`)
     console.log(`POSTGRES_PASSWORD=${postgresPass}`)
     console.log(`OTREE_REST_KEY=${otreeRestKey}`)
+    console.log(`API_KEY=${apiKey}`)
 
   })
   .catch((error) => {
