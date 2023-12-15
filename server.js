@@ -212,7 +212,7 @@ async function main() {
     const user = usersDb[userId] || new User(userId, params.experimentId)
     user.tokenParams = params
     usersDb[userId] = user
-    console.log(`Token parasm: ${JSON.stringify(user.tokenParams)}`)
+    console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (fs.existsSync(__dirname + "/" + params.experimentId)) {
       res.render(__dirname + '/' + params.experimentId + '/index.html', params);
     } else {
