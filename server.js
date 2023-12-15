@@ -211,6 +211,8 @@ async function main() {
     params.experimentId = req.params.experimentId
     const user = usersDb[userId] || new User(userId, params.experimentId)
     user.tokenParams = params
+    usersDb[userId] = user
+    console.log(`Token parasm: ${JSON.stringify(user.tokenParams)}`)
     if (fs.existsSync(__dirname + "/" + params.experimentId)) {
       res.render(__dirname + '/' + params.experimentId + '/index.html', params);
     } else {
@@ -365,6 +367,8 @@ async function main() {
       const expUrl = new URL(urls[i])
       userMapping[userId] = expUrl
       // Set user variables on oTree server
+      // Vars in oTree experiment template are accessed using
+      // the syntax {{ player.participant.vars.age }} where age is a var
       const oTreeVars = user.tokenParams.oTreeVars
       if (oTreeVars) {
         // First update user variables on oTree server
