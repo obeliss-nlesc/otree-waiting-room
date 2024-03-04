@@ -101,8 +101,8 @@ async function main() {
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
 
-  // Get participant info
-  app.get('/api/participants/:userId', validateSignature, async (req, res) => {
+  // Get oTree participant info using liss userId
+  app.get('/api/lissparticipants/:userId', validateSignature, async (req, res) => {
     const participantUrl = userMapping[req.params.userId]
     if(!participantUrl) {
       res.status(404).json({message: `${req.params.userId} not found.`})
@@ -111,13 +111,19 @@ async function main() {
     const parseUrl = url.parse(participantUrl)
     //const hostname = parseUrl.hostname
     const participantCode = lastElement(parseUrl.pathname.split('/'))
-    const results = await db.parQuery(`SELECT
-      code, 
-      _session_code, 
-      _current_page_name, 
-      _index_in_pages,
-      _last_page_timestamp,
-      _last_request_timestamp
+    const results = await db.parQuery(`SELECT *
+      FROM otree_participant 
+      WHERE code = '${participantCode}'`)
+    const result = results.filter(r => {
+      if (r.length == 0) return false
+      return true
+    })
+    res.status(201).json(result)
+  })
+  
+  app.get('/api/participants/:participantCode', validateSignature, async (req, res) => {
+    const participantCode = req.params.participantCode
+    const results = await db.parQuery(`SELECT *
       FROM otree_participant 
       WHERE code = '${participantCode}'`)
     const result = results.filter(r => {
@@ -129,15 +135,7 @@ async function main() {
   
   // Get all participants info
   app.get('/api/participants', validateSignature, async (req, res) => {
-    const results = await db.parQuery(`SELECT 
-      code, 
-      _session_code, 
-      _current_page_name, 
-      _index_in_pages,
-      _last_page_timestamp,
-      _last_request_timestamp
-      FROM otree_participant`)
-    //results = await db.parQuery('SELECT * FROM otree_participant')
+    const results = await db.parQuery(`SELECT * FROM otree_participant`)
     res.status(201).json([].concat(...results))
   })
 
@@ -209,7 +207,12 @@ async function main() {
 
   app.get('/room/:experimentId', validateToken, async (req, res) => {
     const params = req.user
+    const userId = params.userId
     params.experimentId = req.params.experimentId
+    const user = usersDb[userId] || new User(userId, params.experimentId)
+    user.tokenParams = params
+    usersDb[userId] = user
+    console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (fs.existsSync(__dirname + "/" + params.experimentId)) {
       res.render(__dirname + '/' + params.experimentId + '/index.html', params);
     } else {
@@ -361,11 +364,38 @@ async function main() {
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
       const user = usersDb[userId]
-      const expUrl = urls[i]
+      const expUrl = new URL(urls[i])
       userMapping[userId] = expUrl
-      const sock = user.webSocket
-      // Emit a custom event with the game room URL
-      sock.emit('gameStart', { room: expUrl }); 
+      // Set user variables on oTree server
+      // Vars in oTree experiment template are accessed using
+      // the syntax {{ player.participant.vars.age }} where age is a var
+      const oTreeVars = user.tokenParams.oTreeVars
+      if (oTreeVars) {
+        // First update user variables on oTree server
+        // then redirect
+        const config = {
+          headers: {
+            'otree-rest-key': otreeRestKey
+          }
+        }
+        const particpantCode = expUrl.pathname.split('/').pop()
+        const apiUrl = `http://${expUrl.host}/api/participant_vars/${particpantCode}`
+        axios.post(apiUrl, { "vars": oTreeVars}, config)
+          .then(res => {
+            console.log(`Updated ${userId} vars for participant ${particpantCode}.`)
+            const sock = user.webSocket
+            // Emit a custom event with the game room URL
+            sock.emit('gameStart', { room: expUrl.toString() }); 
+          })
+          .catch(err => {
+            console.log(`Error updating ${userId} vars for participant ${particpantCode}.`)
+          })
+
+      } else {
+        const sock = user.webSocket
+        // Emit a custom event with the game room URL
+        sock.emit('gameStart', { room: expUrl.toString() }); 
+      }
     }
   }
 

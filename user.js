@@ -2,6 +2,7 @@ class User {
   constructor(userId, experimentId) {
     this.userId = userId;
     this.experimentId = experimentId
+    this.tokenParams = null;
     this.oTreeId = null;
     this.redirectedUrl = null;
     this.state = 'new';
