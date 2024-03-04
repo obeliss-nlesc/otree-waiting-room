@@ -369,8 +369,8 @@ async function main() {
       // Set user variables on oTree server
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
-      const oTreeVars = user.tokenParams.oTreeVars
-      if (oTreeVars) {
+      const oTreeVars = user.tokenParams.oTreeVars || {}
+      //if (oTreeVars) {
         // First update user variables on oTree server
         // then redirect
         const config = {
@@ -382,7 +382,7 @@ async function main() {
         const apiUrl = `http://${expUrl.host}/api/participant_vars/${particpantCode}`
         axios.post(apiUrl, { "vars": oTreeVars}, config)
           .then(res => {
-            console.log(`Updated ${userId} vars for participant ${particpantCode}.`)
+            console.log(`Updated ${userId} vars for participant ${particpantCode} with ${oTreeVars}`)
             const sock = user.webSocket
             // Emit a custom event with the game room URL
             sock.emit('gameStart', { room: expUrl.toString() }); 
@@ -391,11 +391,11 @@ async function main() {
             console.log(`Error updating ${userId} vars for participant ${particpantCode}.`)
           })
 
-      } else {
-        const sock = user.webSocket
+      //} else {
+      //  const sock = user.webSocket
         // Emit a custom event with the game room URL
-        sock.emit('gameStart', { room: expUrl.toString() }); 
-      }
+      //  sock.emit('gameStart', { room: expUrl.toString() }); 
+      //}
     }
   }
 
