@@ -2,36 +2,36 @@
 ## Setup docker environment
 Run multiple otree servers using docker compose. follow [setup](https://github.com/obeliss-nlesc/otree-docker).
 Run Redis server:
-```
-docker run -d Redis
+```shell
+docker run --detach redis:7.2.4
 ```
 
 ## Install dependencies
 To install package dependencies
-```
+```shell
 npm install
 ```
 
 ## Setup .env
-If using Docker ( [Docker setup](https://github.com/obeliss-nlesc/otree-docker) ) development environment then run 
-```
+If using Docker ([Docker setup](https://github.com/obeliss-nlesc/otree-docker)) development environment, then run
+```shell
 node set_env.js > .env
 ```
 to set the .env file. The script will scan the local docker images to get the IPs of the containers.
 
 ## Generate public and private keys
 To generate keys for token encoding and verification, first generate the private key
-```
+```shell
 openssl genpkey -algorithm RSA -out private-key.pem
 ```
 then generate the public key
-```
+```shell
 openssl rsa -pubout -in private-key.pem -out public-key.pem
 ```
 
 ## Start waiting room
 To start server on a default port 8060 localhost
-```
+```shell
 npm run dev
 ```
 Three test user URLs are printed on the command line that can be used to test the server.
