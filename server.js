@@ -213,10 +213,10 @@ async function main() {
     user.tokenParams = params
     usersDb[userId] = user
     console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
-    if (fs.existsSync(__dirname + "/" + params.experimentId)) {
-      res.render(__dirname + '/' + params.experimentId + '/index.html', params);
+    if (fs.existsSync(__dirname + "/webpage_templates/" + params.experimentId + '.html')) {
+      res.render(__dirname + '/webpage_templates/' + params.experimentId + '.html', params);
     } else {
-      res.render(__dirname + '/default/index_template.html', params);
+      res.render(__dirname + '/webpage_templates/default.html', params);
     }
   });
 

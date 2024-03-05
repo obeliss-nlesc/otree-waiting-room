@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<title>Waiting Room</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<style>
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader {
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid #3498db;
+  width: 120px;
+  height: 120px;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 2s linear infinite;
+}
+
+.timer {
+ text-align: center;
+ font-size: 60px;
+ margin-top: 0px;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+<body>
+  <div class="w3-container">
+    <p>
+    <%= headerText %>
+    </p>
+  </div>
+  <div class="w3-row">
+    <div class="w3-col w3-container m4 l3 w3-padding">
+      <table id="tableDiv" class="w3-table">
+        <tr>
+          <th>Beloningen</th>
+          <th></th>
+        </tr>
+        <tr>
+          <td>Meedoen</td>
+          <td> <%= meedoenValue %></td>
+        </tr>
+        <tr>
+          <td>Afronden</td>
+          <td> <%= afrondenValue %></td>
+        </tr>
+        <tr>
+          <td>Bonus</td>
+          <td> <%= bonusValue %></td>
+        </tr>
+      </table>
+    </div>
+    <div class="w3-col w3-container w3-center m8 l9 w3-padding">
+      <div id="loaderDiv" class="w3-container w3-hide">
+        <button id="loaderDiv" class="w3-button w3-hover-white w3-jumbo">
+          <div class="loader"></div>
+        </button>
+      </div>
+      <div id="startDiv">
+        <button id="startButton" class="w3-btn w3-jumbo w3-green w3-disabled">START</button>
+        <p>Druk op start om in de wachtkamer plaats te nemen</p>
+      </div>
+      <div id="agreeDiv" class="w3-hide">
+        <p>Er zijn genoeg spelers om het spel te starten. Klik op "Gereed" om het spel te starten. Als alle spelers gereed zijn zal het spel starten!</p>
+        <button id="agreeButton" class="w3-btn w3-jumbo w3-gray">GEREED</button>
+      </div>
+      <p id="timerBox" class="timer w3-hide"></p>
+      <div id="waitDiv" class="w3-hide">
+        <div class="w3-container w3-border w3-large w3-margin">
+          <div class="w3-center">
+
+            <p>Welkom in de wachtkamer!</p>
+            <p>We wachten nog op <span id="playersToWaitFor"></span> spelers. Zosnel er in total <span id="maxPlayers"></span> speler/s zijn zal het spel starten.</p>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Waiting Room HTML Code -->
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const experimentId = '<%= experimentId %>';
+    const userId = '<%= userId %>';
+    let uuid = null;
+    let myState = 'new';
+    // Connect to the WebSocket server
+    const socket = io();
+    const agreeButton = document.getElementById('agreeButton');
+    agreeButton.addEventListener('click', function() {
+      console.log(`agreeButton clicked: agreement uuid ${uuid}`);
+      // User sends agreement to start game.
+      socket.emit("userAgreed", {
+        'experimentId': experimentId,
+        'userId': userId,
+        'uuid': uuid
+      })
+      hideDiv("startDiv")
+      hideDiv("tableDiv")
+      hideDiv("waitDiv")
+      hideDiv("agreeDiv")
+      showDiv("loaderDiv")
+    })
+    function setTimerAndShow(id, timeSeconds) {
+      const p = document.getElementById(id)
+      seconds = timeSeconds
+      p.innerText = seconds
+      showDiv(id)
+      interval = setInterval(() => {
+        seconds -= 1
+        p.innerText = seconds
+        if (seconds <= 0) {
+          clearInterval(interval)
+        }
+      }, 1000)
+    }
+    function hideDiv(id) {
+      const div = document.getElementById(id)
+      if(!div) {
+        return
+      }
+      if(!div.classList.contains('w3-hide')){
+        div.classList.add('w3-hide')
+      }
+    }
+    function showDiv(id) {
+      const div = document.getElementById(id)
+      if(!div) {
+        return
+      }
+      if(div.classList.contains('w3-hide')){
+        div.classList.remove('w3-hide')
+      }
+    }
+    // Handle connection established
+    socket.on('connect', () => {
+      console.log(`[EVENT] connect`)
+      const startButton = document.getElementById('startButton');
+      if (startButton.classList.contains('w3-disabled')) {
+        startButton.classList.remove('w3-disabled');
+      }
+      socket.emit("landingPage", {
+        'experimentId': experimentId,
+        'userId': userId
+      })
+      myState = 'startedPage'
+      console.log('Connected to server');
+    });
+    const startButton = document.getElementById('startButton');
+    startButton.addEventListener('click', function() {
+      socket.emit("newUser", {
+        'experimentId': experimentId,
+        'userId': userId
+      })
+    })
+
+    // Server instrcuts us to wait for more players.
+    // Server passes the number of players we are waiting for.
+    socket.on('wait', (data) => {
+      console.log('[SOCKET][wait] ', data)
+      document.getElementById('playersToWaitFor').innerText = data.playersToWaitFor
+      document.getElementById('maxPlayers').innerText = data.maxPlayers
+      hideDiv("startDiv")
+      hideDiv("tableDiv")
+      hideDiv("agreeDiv")
+      hideDiv("timerBox")
+      hideDiv("loaderDiv")
+      showDiv("waitDiv")
+      uuid = null;
+      myState = 'queued'
+    })
+
+    socket.on('reset', (data) => {
+      console.log('[SOCKET][reset] ', data)
+      hideDiv("agreeDiv")
+      hideDiv("timerBox")
+      hideDiv("loaderDiv")
+      hideDiv("waitDiv")
+      showDiv("startDiv")
+      showDiv("tableDiv")
+      uuid = null;
+      myState = "startedPage";
+    })
+    
+    // Update from server about the number of waiting players
+    socket.on('queueUpdate', (data) => {
+      console.log('[SOCKET][queueUpdate] ', data)
+      document.getElementById('playersToWaitFor').innerText = data.playersToWaitFor
+      document.getElementById('maxPlayers').innerText = data.maxPlayers
+    })
+
+    // Wait for players to agree to start
+    socket.on('agree', (data) => {
+      uuid = data.uuid;
+      console.log('[SOCKET][agree] ', data)
+      hideDiv("startDiv")
+      hideDiv("tableDiv")
+      hideDiv("waitDiv")
+      showDiv("agreeDiv")
+      setTimerAndShow("timerBox", data.timeout)
+    })
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    // Handle redirect to game
+    socket.on('gameStart', (data) => {
+      console.log('Redirecting to game:', data.room);
+      window.location.href = data.room; // Redirect to the game URL
+    });
+  </script>
+
+
+</body>
+</html>
+
