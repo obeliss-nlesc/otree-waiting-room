@@ -16,9 +16,6 @@ const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
 const config = require('./config.json')
-const { resolve } = require('path')
-const { promises } = require('dns')
-const { warn } = require('console')
 
 
 require('dotenv').config();
@@ -38,23 +35,22 @@ function getValue(obj, key, defaultValue) {
 }
 
 function getOtreeUrls(otreeIPs, otreeRestKey) {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const config = {
       headers: {
         'otree-rest-key': otreeRestKey
       }
     }
-    results = []
-    allProms = []
+    const results = []
     // Get a map of promises for every REST call to the servers
     // then we can wait on all promises to resolve with Promise.all
-    allProms = otreeIPs.map(s => {
+    const allProms = otreeIPs.map(s => {
       const apiUrl = `http://${s}/api/sessions`
       return axios.get(apiUrl, config).then(async res => {
         // For every session on the server we call back to the server
         // to get more participant info. We do the same with promises 
         // and wait on these internal promises resolve.
-        proms = res.data.map(session => {
+        const subProms = res.data.map(session => {
           const code = session.code
           const experimentName = session.config_name
           const sessionUrl = apiUrl + '/' + code
@@ -69,13 +65,16 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
               })
             })
           })
-        }) // proms
-        await Promise.all(proms)
+        }) //subProms
+        await Promise.all(subProms)
       })
     })
-    await Promise.all(allProms)
-    //console.log(`${JSON.stringify(results,null,2)}`)
-    resolve(results)
+    Promise.all(allProms).then(()=>{
+      //console.log(`${JSON.stringify(results,null,2)}`)
+      resolve(results)
+    }).catch(e => {
+      reject(e)
+    })
   })
 }
 
@@ -141,13 +140,10 @@ const validateToken = (req, res, next) => {
 async function main() {
   const matchUsers = 3
   const experiments = {}
-  //const sockets = {}
   const usersDb = {}
   const userMapping = {}
   const agreementIds = {}
-  const expToEnable = config.experiments.map(e => {
-    return e.name
-  })
+  const expToEnable = config.experiments.map(e => e.name)
 
   // Get oTree experiment URLs from servers
   otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
@@ -165,7 +161,8 @@ async function main() {
   })
 
 
-  console.log(JSON.stringify(experiments, null, 2))
+
+  console.log(`Experiments setup:\n${JSON.stringify(experiments, null, 2)}`)
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
