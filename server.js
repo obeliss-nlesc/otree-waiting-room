@@ -15,6 +15,10 @@ const queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
+const config = require('./config.json')
+const { resolve } = require('path')
+const { promises } = require('dns')
+const { warn } = require('console')
 
 
 require('dotenv').config();
@@ -31,6 +35,48 @@ function getValue(obj, key, defaultValue) {
     obj[key] = defaultValue
   }
   return obj[key]
+}
+
+function getOtreeUrls(otreeIPs, otreeRestKey) {
+  return new Promise(async (resolve, reject) => {
+    const config = {
+      headers: {
+        'otree-rest-key': otreeRestKey
+      }
+    }
+    results = []
+    allProms = []
+    // Get a map of promises for every REST call to the servers
+    // then we can wait on all promises to resolve with Promise.all
+    allProms = otreeIPs.map(s => {
+      const apiUrl = `http://${s}/api/sessions`
+      return axios.get(apiUrl, config).then(async res => {
+        // For every session on the server we call back to the server
+        // to get more participant info. We do the same with promises 
+        // and wait on these internal promises resolve.
+        proms = res.data.map(session => {
+          const code = session.code
+          const experimentName = session.config_name
+          const sessionUrl = apiUrl + '/' + code
+          return axios.get(sessionUrl, config).then(res => {
+            res.data.participants.forEach(p => {
+              experimentUrl = `http://${s}/InitializeParticipant/${p.code}`
+              serverName = s
+              results.push({
+                "server": s,
+                "experimentName": experimentName,
+                "experimentUrl": experimentUrl
+              })
+            })
+          })
+        }) // proms
+        await Promise.all(proms)
+      })
+    })
+    await Promise.all(allProms)
+    //console.log(`${JSON.stringify(results,null,2)}`)
+    resolve(results)
+  })
 }
 
 // Get experiment urls from server and experiment
@@ -99,6 +145,27 @@ async function main() {
   const usersDb = {}
   const userMapping = {}
   const agreementIds = {}
+  const expToEnable = config.experiments.map(e => {
+    return e.name
+  })
+
+  // Get oTree experiment URLs from servers
+  otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
+  otreeData.forEach(r => {
+    const exp = getValue(experiments, r.experimentName, { 
+      name: r.experimentName,
+      enabled: (expToEnable.includes(r.experimentName)) ? true : false,
+      servers: {} 
+    })
+    const expUrls = getValue(exp.servers, r.server, [])
+    if (expUrls.includes(r.experimentUrl)) {
+      return
+    }
+    expUrls.push(r.experimentUrl)
+  })
+
+
+  console.log(JSON.stringify(experiments, null, 2))
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
@@ -122,6 +189,7 @@ async function main() {
     })
     res.status(201).json(result)
   })
+
   
   app.get('/api/participants/:participantCode', validateSignature, async (req, res) => {
     const participantCode = req.params.participantCode
@@ -144,47 +212,14 @@ async function main() {
   // Setup experiment server urls
   app.post('/api/experiments/:experimentId', validateSignature, async (req, res) => {
     const experimentId = req.params.experimentId
-    const data = req.body
-    const exp = getValue(experiments, experimentId, { 'servers': {} })
-    
-    experiments[experimentId]['config'] = data
-    // Delete queue for experiment
-    queue.deleteQueue(experimentId)
-
-    otreeIPs.forEach(s => {
-      const config = {
-        headers: {
-          'otree-rest-key': otreeRestKey
-        }
-      }
-      const apiUrl = `http://${s}/api/sessions`
-      const expUrls = getValue(exp.servers, s, [])
-      // Probe oTree servers API to get sessions
-      axios.get(apiUrl, config)
-        .then(res => {
-          res.data.forEach(session => {
-            const code = session.code
-            const expName = session.config_name
-            if(expName != experimentId) {
-              return
-            }
-            const sessionUrl = apiUrl + '/' + code
-            // Query sessions for participants
-            axios.get(sessionUrl, config)
-              .then(res => {
-                res.data.participants.forEach(p => {
-                  expUrls.push(`http://${s}/InitializeParticipant/${p.code}`)
-                })
-              })
-              .catch(error => {
-                console.error(error)
-              })
-          })
-        })
-        .catch(error => {
-          console.error(error)
-        })
-    })
+    // const data = req.body
+    const exp = experiments[experimentId]
+    if (!exp) {
+      res.status(404).json({ message: `Experiment ${experimentId} not found!`})
+      return
+    }
+    // Enable experiment
+    exp.enabled = true
     res.status(201).json({ message: "Ok"})
   })
 
@@ -211,9 +246,15 @@ async function main() {
     const params = req.user
     const userId = params.userId
     params.experimentId = req.params.experimentId
+    const exp = experiments[params.experimentId]
+    if (!exp || !exp.enabled){
+      res.status(404).send()
+      return
+    }
     const user = usersDb[userId] || new User(userId, params.experimentId)
     user.tokenParams = params
     usersDb[userId] = user
+
     console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (fs.existsSync(__dirname + "/webpage_templates/" + params.experimentId + '.html')) {
       res.render(__dirname + '/webpage_templates/' + params.experimentId + '.html', params);
