@@ -36,7 +36,7 @@ function pop(queueName, count = 1) {
 }
 
 function deleteQueue(queueName) {
-  queues[queueName] = []
+  queues.delete(queueName)
 }
 
 function getQueue(queueName) {
