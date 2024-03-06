@@ -257,7 +257,7 @@ async function main() {
       user.addListenerForState("queued", async (user, state) => {
         let userId = user.userId
         let experimentId = user.experimentId
-        // To use Redis you need to awit on the queue.
+        // To use Redis you need to await on the queue.
         // let queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
         let queuedUsers = queue.pushAndGetQueue(experimentId, userId)
 
@@ -265,7 +265,7 @@ async function main() {
 
         // Check if there are enough users to start the game
         if (queuedUsers.length >= matchUsers) {
-          // To use Redis you need to awit on the queue.
+          // To use Redis you need to await on the queue.
           // const gameUsers = await queue.pop(experimentId, matchUsers)
           const gameUsers = queue.pop(experimentId, matchUsers)
           const expUrls = findUrls(experiments[experimentId], matchUsers)
@@ -297,7 +297,7 @@ async function main() {
             }
         })
         } else {
-          // To use Redis you need to awit on the queue.
+          // To use Redis you need to await on the queue.
           // let queuedUsers = await queue.getQueue(experimentId)
           let queuedUsers = queue.getQueue(experimentId)
           let playersToWaitFor = matchUsers - queuedUsers.length;
