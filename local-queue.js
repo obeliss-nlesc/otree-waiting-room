@@ -17,6 +17,10 @@ function getOrCreateQueue(queueName) {
 // Enqueue an item to the queue
 async function push(queueName, item) {
   q = getOrCreateQueue(queueName)
+  // Check if the element already exists in the list
+  if (!(item in q)) {
+    q.push(item)
+  }
   q.push(item)
 }
 
