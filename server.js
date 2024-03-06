@@ -257,13 +257,17 @@ async function main() {
       user.addListenerForState("queued", async (user, state) => {
         let userId = user.userId
         let experimentId = user.experimentId
-        let queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
+        // To use Redis you need to awit on the queue.
+        // let queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
+        let queuedUsers = queue.pushAndGetQueue(experimentId, userId)
 
         console.log(`User ${userId} in event listener in state ${state}`)
 
         // Check if there are enough users to start the game
         if (queuedUsers.length >= matchUsers) {
-          const gameUsers = await queue.pop(experimentId, matchUsers)
+          // To use Redis you need to awit on the queue.
+          // const gameUsers = await queue.pop(experimentId, matchUsers)
+          const gameUsers = queue.pop(experimentId, matchUsers)
           const expUrls = findUrls(experiments[experimentId], matchUsers)
           console.log("Enough users; waiting for agreement.")
           const uuid = crypto.randomUUID();
@@ -293,7 +297,9 @@ async function main() {
             }
         })
         } else {
-          let queuedUsers = await queue.getQueue(experimentId)
+          // To use Redis you need to awit on the queue.
+          // let queuedUsers = await queue.getQueue(experimentId)
+          let queuedUsers = queue.getQueue(experimentId)
           let playersToWaitFor = matchUsers - queuedUsers.length;
           user.webSocket.emit("wait", { 
             playersToWaitFor: playersToWaitFor, 

@@ -32,24 +32,6 @@ npm run dev
 ```
 Three test user URLs are printed on the command line that can be used to test the server.
 
-## Using Redis queue option
-By default the waiting room uses a local queue. To switch to Redis, first:
-Change line of code in server.js
-```javascript
-const queue = require('./local-queue.js')
-```
-to
-```javascript
-const queue = require('./redis-queue.js')
-```
-then run a Redis server e.g. with Docker
-```shell
-docker run --detach redis:7.2.4
-```
-then rerun the env setup
-```shell
-node set_env.js > .env
-```
 
 ## API documentation
 API endpoints are documented using Postman and can be found [here](https://documenter.getpostman.com/view/1612141/2s9YeG7Bqm).
