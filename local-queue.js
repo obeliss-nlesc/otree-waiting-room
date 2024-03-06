@@ -32,7 +32,7 @@ function pop(queueName, count = 1) {
   if (q.length < count) {
     return []
   }
-  return q.splice(q.length - count, q.length)
+  return q.splice(0, count)
 }
 
 function deleteQueue(queueName) {
