@@ -1,41 +1,33 @@
-const { weightSrvRecords } = require("ioredis/built/cluster/util")
+const queues = new Map()
 
-const queues = {}
 
 // Get or create queue
 function getOrCreateQueue(queueName) {
-  q = null
-  if (!(queueName in queues)) {
-    q = []
-    queues[queueName] = q 
-  } else {
-    q = queues[queueName]
+  if (!queues.has(queueName)) {
+    queues.set(queueName, new Array())
   }
-  return q
+  return queues.get(queueName)
 }
 
 // Enqueue an item to the queue
-async function push(queueName, item) {
+function push(queueName, item) {
   q = getOrCreateQueue(queueName)
-  // Check if the element already exists in the list
-  if (!(item in q)) {
+  if (!q.includes(item)) {
     q.push(item)
   }
-  q.push(item)
 }
 
 // Enqueue an item to the queue and get the queue
-async function pushAndGetQueue(queueName, item) {
+function pushAndGetQueue(queueName, item) {
   q = getOrCreateQueue(queueName)
-  // Check if the element already exists in the list
-  if (!(item in q)) {
+  if (!q.includes(item)) {
     q.push(item)
   }
   return q
 }
 
 // Dequeue an item from the queue
-async function pop(queueName, count = 1) {
+function pop(queueName, count = 1) {
   q = getOrCreateQueue(queueName)
   if (q.length < count) {
     return []
@@ -43,21 +35,21 @@ async function pop(queueName, count = 1) {
   return q.splice(q.length - count, q.length)
 }
 
-async function deleteQueue(queueName) {
+function deleteQueue(queueName) {
   queues[queueName] = []
 }
 
-async function getQueue(queueName) {
+function getQueue(queueName) {
   return getOrCreateQueue(queueName)
 }
 
 // Function to check if a queue is empty
-async function isEmpty(queueName) {
+function isEmpty(queueName) {
   q = getOrCreateQueue(queueName)
   return q.length === 0
 }
 
-async function size(queueName) {
+function size(queueName) {
   q = getOrCreateQueue(queueName)
   return q.length
 }
