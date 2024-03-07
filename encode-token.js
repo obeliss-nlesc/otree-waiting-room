@@ -24,14 +24,8 @@ function clone(o) {
 const users = ['user001', 'user002', 'user003']
 
 const userTokens = users.map(u => {
-const flip = Math.round(Math.random())
   const userData = clone(userTemplate)
   userData.userId = u
-  if (flip == 0) {
-    delete userData.oTreeVars
-  } else {
-    userData.oTreeVars.age += 5
-  }
   return jwt.sign(userData, privateKey, {algorithm: 'RS256', expiresIn: '12h'})
 })
 
