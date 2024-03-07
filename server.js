@@ -96,7 +96,11 @@ async function main() {
   const matchUsers = 3
   const experiments = {}
   //const sockets = {}
-  const usersDb = {}
+  /**
+   *
+   * @type {Map<string, User>}
+   */
+  const usersDb = new Map()
   const userMapping = {}
   const agreementIds = {}
 
@@ -211,9 +215,9 @@ async function main() {
     const params = req.user
     const userId = params.userId
     params.experimentId = req.params.experimentId
-    const user = usersDb[userId] || new User(userId, params.experimentId)
+    const user = usersDb.get(userId) || new User(userId, params.experimentId)
     user.tokenParams = params
-    usersDb[userId] = user
+    usersDb.set(userId, user)
     console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (fs.existsSync(__dirname + "/webpage_templates/" + params.experimentId + '.html')) {
       res.render(__dirname + '/webpage_templates/' + params.experimentId + '.html', params);
@@ -226,23 +230,30 @@ async function main() {
     socket.on('landingPage', async (msg) => {
       const userId = msg.userId
       const experimentId = msg.experimentId
-      const user = usersDb[userId] || new User(userId, experimentId)
+      const user = usersDb.get(userId) || new User(userId, experimentId)
       user.webSocket = socket
-      // If user is queued an refreshes page then re-trigger
+      // If user is queued and refreshes page then re-trigger
       // queued events.
-      if (user.state == 'queued') {
-        console.log(`User ${userId} already in state ${user.state}.`)
-        user.changeState('queued');
-        return
+      switch (user.state) {
+        case "queued":
+          console.log(`User ${userId} already in state ${user.state}.`)
+          user.changeState('queued')
+          break
+        case "inoTreePages":
+          console.log(`User ${userId} already in state ${user.state}.`)
+          const expUrl = user.redirectedUrl
+          socket.emit('gameStart', { room: expUrl.toString() });
+          break
+        default:
+          user.changeState('startedPage')
+          user.reset()
+          usersDb.set(userId, user)
+          console.log(`User ${userId} connected for experiment ${experimentId}.`);
       }
-      user.changeState('startedPage')
-      user.reset()
-      usersDb[userId] = user
-      console.log(`User ${userId} connected for experiment ${experimentId}.`);
     })
     socket.on('newUser', async (msg) => {
       let userId = msg.userId
-      let user = usersDb[userId]
+      let user = usersDb.get(userId)
 
       if (!user) {
         console.error(`No user ${userId} found!`)
@@ -287,11 +298,11 @@ async function main() {
             if (agreement.isBroken()){
               revertUrls(experiments[agreement.experimentId], agreement.urls, agreement.server)
               agreedUsers.forEach(userId => {
-                user = usersDb[userId]
+                user = usersDb.get(userId)
                 user.changeState('queued')
               })
               nonAgreedUsers.forEach(userId => {
-                user = usersDb[userId]
+                user = usersDb.get(userId)
                 user.reset()
               })
             }
@@ -306,7 +317,7 @@ async function main() {
             maxPlayers: matchUsers
           })
           queuedUsers.forEach(userId => {
-            user = usersDb[userId]
+            user = usersDb.get(userId)
             if (!user) {
               console.error(`User ${userId} not found!`)
               return
@@ -337,6 +348,7 @@ async function main() {
         console.log(`[ERROR] no agreement ${uuid}`)
         return
       }
+      usersDb.get(userId).changeState("agreed")
       // If everyone agrees, start game
       if(agreement.agree(userId)) {
         console.log("Start Game!")
@@ -356,7 +368,7 @@ async function main() {
   function agreeGame(users, uuid, agreement) {
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
-      const user = usersDb[userId]
+      const user = usersDb.get(userId)
       const sock = user.webSocket
       if(!sock) {
         console.error(`User ${userId} has not socket!`);
@@ -367,11 +379,17 @@ async function main() {
   }
 
   // Function to start the game with the specified users
+  /**
+   *
+   * @param users {string[]}
+   * @param urls {string[]}
+   */
   function startGame(users, urls) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`);
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
-      const user = usersDb[userId]
+      const user = usersDb.get(userId)
+      user.changeState("redirected")
       const expUrl = new URL(urls[i])
       userMapping[userId] = expUrl
       // Set user variables on oTree server
@@ -386,17 +404,19 @@ async function main() {
             'otree-rest-key': otreeRestKey
           }
         }
-        const particpantCode = expUrl.pathname.split('/').pop()
-        const apiUrl = `http://${expUrl.host}/api/participant_vars/${particpantCode}`
+        const participantCode = expUrl.pathname.split('/').pop()
+        const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
         axios.post(apiUrl, { "vars": oTreeVars}, config)
           .then(res => {
-            console.log(`Updated ${userId} vars for participant ${particpantCode} with ${oTreeVars}`)
+            console.log(`Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`)
             const sock = user.webSocket
             // Emit a custom event with the game room URL
-            sock.emit('gameStart', { room: expUrl.toString() }); 
+            sock.emit('gameStart', { room: expUrl.toString() });
+            user.changeState("inoTreePages")
+            user.redirectedUrl = expUrl
           })
           .catch(err => {
-            console.log(`Error updating ${userId} vars for participant ${particpantCode}.`)
+            console.log(`Error updating ${userId} vars for participant ${participantCode}.`)
           })
 
       //} else {

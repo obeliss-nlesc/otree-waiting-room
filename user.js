@@ -13,15 +13,15 @@ class User {
   // DFA transition table
   transitionTable = {
     'new': ['startedPage'],
-    'startedPage': ['queued', 'dropedout'],
-    'queued': ['queued', 'agreed', 'dropedout'],
-    'agreed': ['redirected', 'timedOut', 'queued', 'dropedout'],
-    'redirected': ["inoTreePages", "dropedout" ],
-    'inoTreePages': ["inoTreePages", "oTreeCompleted", "oTreeDropedout" ],
-    'oTreeCompleted': ["final", "allowedBack", "dropedout" ],
+    'startedPage': ['queued', 'droppedOut'],
+    'queued': ['queued', 'agreed', 'droppedOut'],
+    'agreed': ['redirected', 'timedOut', 'queued', 'droppedOut'],
+    'redirected': ["inoTreePages", "droppedOut" ],
+    'inoTreePages': ["inoTreePages", "oTreeCompleted", "oTreeDroppedOut" ],
+    'oTreeCompleted': ["final", "allowedBack", "droppedOut" ],
     'allowedBack': ["queued", "startedPage"],
-    'oTreeDropedout': ["allowedBack", "nonAllowedBack"],
-    'dropedout': ["allowedBack", "nonAllowedBack"],
+    'oTreeDroppedOut': ["allowedBack", "nonAllowedBack"],
+    'droppedOut': ["allowedBack", "nonAllowedBack"],
   };
 
   reset() {
