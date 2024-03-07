@@ -15,6 +15,7 @@ const queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
+const config = require('./config.json')
 
 
 require('dotenv').config();
@@ -25,12 +26,61 @@ const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = 8060
 const publicKey = fs.readFileSync('./public-key.pem', 'utf8')
 
-
-function getValue(obj, key, defaultValue) {
+function getOrSetValue(obj, key, defaultValue) {
   if(!(key in obj)) {
     obj[key] = defaultValue
   }
   return obj[key]
+}
+
+function getOtreeUrls(otreeIPs, otreeRestKey) {
+  return new Promise((resolve, reject) => {
+    const config = {
+      headers: {
+        'otree-rest-key': otreeRestKey
+      }
+    }
+    const results = []
+    // Get a map of promises for every REST call to the servers
+    // then we can wait on all promises to resolve with Promise.all
+    const outerPromises = otreeIPs.map(s => {
+      const apiUrl = `http://${s}/api/sessions`
+      return axios.get(apiUrl, config).then(async res => {
+        // For every session on the server we call back to the server
+        // to get more participant info. We do the same with promises 
+        // and wait on these internal promises resolve.
+        const innerPromises = res.data.map(session => {
+          const code = session.code
+          const experimentName = session.config_name
+          const sessionUrl = apiUrl + '/' + code
+          return axios.get(sessionUrl, config).then(res => {
+            res.data.participants.forEach(p => {
+              experimentUrl = `http://${s}/InitializeParticipant/${p.code}`
+              serverName = s
+              results.push({
+                "server": s,
+                "experimentName": experimentName,
+                "experimentUrl": experimentUrl
+              })
+            })
+          })
+        }) //innerPromises
+        // Wait for promises in the inner loop (map) to resolve before
+        // movin to the next outer loop.
+        try {
+          await Promise.all(innerPromises)
+        } catch(error) {
+          reject(error)
+        }
+      })
+    })
+    Promise.all(outerPromises).then(()=>{
+      //console.log(`${JSON.stringify(results,null,2)}`)
+      resolve(results)
+    }).catch(error => {
+      reject(error)
+    })
+  })
 }
 
 // Get experiment urls from server and experiment
@@ -95,7 +145,6 @@ const validateToken = (req, res, next) => {
 async function main() {
   const matchUsers = 3
   const experiments = {}
-  //const sockets = {}
   /**
    *
    * @type {Map<string, User>}
@@ -103,6 +152,32 @@ async function main() {
   const usersDb = new Map()
   const userMapping = {}
   const agreementIds = {}
+  const expToEnable = config.experiments.map(e => e.name)
+
+  try {
+    // Get oTree experiment URLs from servers
+    otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
+    // Build experiments object
+    otreeData.forEach(r => {
+      const exp = getOrSetValue(experiments, r.experimentName, { 
+        name: r.experimentName,
+        enabled: (expToEnable.includes(r.experimentName)) ? true : false,
+        servers: {} 
+      })
+      const expUrls = getOrSetValue(exp.servers, r.server, [])
+      if (expUrls.includes(r.experimentUrl)) {
+        return
+      }
+      expUrls.push(r.experimentUrl)
+    })
+  } catch(error) {
+    console.log(`[ERROR] Failed to retrieve data from oTree server/s reason: ${error.message}`)
+    process.exit(1)
+  }
+
+
+
+  console.log(`Experiments setup:\n${JSON.stringify(experiments, null, 2)}`)
 
   app.engine('html', require('ejs').renderFile);
   app.use(express.json());
@@ -126,6 +201,7 @@ async function main() {
     })
     res.status(201).json(result)
   })
+
   
   app.get('/api/participants/:participantCode', validateSignature, async (req, res) => {
     const participantCode = req.params.participantCode
@@ -148,47 +224,14 @@ async function main() {
   // Setup experiment server urls
   app.post('/api/experiments/:experimentId', validateSignature, async (req, res) => {
     const experimentId = req.params.experimentId
-    const data = req.body
-    const exp = getValue(experiments, experimentId, { 'servers': {} })
-    
-    experiments[experimentId]['config'] = data
-    // Delete queue for experiment
-    queue.deleteQueue(experimentId)
-
-    otreeIPs.forEach(s => {
-      const config = {
-        headers: {
-          'otree-rest-key': otreeRestKey
-        }
-      }
-      const apiUrl = `http://${s}/api/sessions`
-      const expUrls = getValue(exp.servers, s, [])
-      // Probe oTree servers API to get sessions
-      axios.get(apiUrl, config)
-        .then(res => {
-          res.data.forEach(session => {
-            const code = session.code
-            const expName = session.config_name
-            if(expName != experimentId) {
-              return
-            }
-            const sessionUrl = apiUrl + '/' + code
-            // Query sessions for participants
-            axios.get(sessionUrl, config)
-              .then(res => {
-                res.data.participants.forEach(p => {
-                  expUrls.push(`http://${s}/InitializeParticipant/${p.code}`)
-                })
-              })
-              .catch(error => {
-                console.error(error)
-              })
-          })
-        })
-        .catch(error => {
-          console.error(error)
-        })
-    })
+    // const data = req.body
+    const exp = experiments[experimentId]
+    if (!exp) {
+      res.status(404).json({ message: `Experiment ${experimentId} not found!`})
+      return
+    }
+    // Enable experiment
+    exp.enabled = true
     res.status(201).json({ message: "Ok"})
   })
 
@@ -215,6 +258,11 @@ async function main() {
     const params = req.user
     const userId = params.userId
     params.experimentId = req.params.experimentId
+    const exp = experiments[params.experimentId]
+    if (!exp || !exp.enabled){
+      res.status(404).send()
+      return
+    }
     const user = usersDb.get(userId) || new User(userId, params.experimentId)
     user.tokenParams = params
     usersDb.set(userId, user)
@@ -396,34 +444,27 @@ async function main() {
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
       const oTreeVars = user.tokenParams.oTreeVars || {}
-      //if (oTreeVars) {
-        // First update user variables on oTree server
-        // then redirect
-        const config = {
-          headers: {
-            'otree-rest-key': otreeRestKey
-          }
+      // First update user variables on oTree server
+      // then redirect
+      const config = {
+        headers: {
+          'otree-rest-key': otreeRestKey
         }
-        const participantCode = expUrl.pathname.split('/').pop()
-        const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
-        axios.post(apiUrl, { "vars": oTreeVars}, config)
-          .then(res => {
-            console.log(`Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`)
-            const sock = user.webSocket
-            // Emit a custom event with the game room URL
-            sock.emit('gameStart', { room: expUrl.toString() });
-            user.changeState("inoTreePages")
-            user.redirectedUrl = expUrl
-          })
-          .catch(err => {
-            console.log(`Error updating ${userId} vars for participant ${participantCode}.`)
-          })
-
-      //} else {
-      //  const sock = user.webSocket
-        // Emit a custom event with the game room URL
-      //  sock.emit('gameStart', { room: expUrl.toString() }); 
-      //}
+      }
+      const participantCode = expUrl.pathname.split('/').pop()
+      const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
+      axios.post(apiUrl, { "vars": oTreeVars}, config)
+        .then(res => {
+          console.log(`Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`)
+          const sock = user.webSocket
+          // Emit a custom event with the game room URL
+          sock.emit('gameStart', { room: expUrl.toString() });
+          user.changeState("inoTreePages")
+          user.redirectedUrl = expUrl
+        })
+        .catch(err => {
+          console.log(`Error updating ${userId} vars for participant ${participantCode}.`)
+        })
     }
   }
 
@@ -431,7 +472,6 @@ async function main() {
   server.listen(port, () => {
     console.log('Waiting room listening on port: ', port);
   });
-
 }
 
 main()

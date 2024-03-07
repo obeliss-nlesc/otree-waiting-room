@@ -1,59 +1,7 @@
 {
-  "servers": [
+  "experiments": [
     {
-      "url": "http://localhost:9093",
-      "experiments": [
-        {
-          "name": "guess2/3",
-          "scheduleFunction": {
-            "name": "firstCome",
-            "parameters": {
-              "minMatch": 3,
-              "maxMatch": 3
-            }
-          },
-          "urls": [
-            "http://localhost:9093/InitializeParticipant/yr59m2gd", "http://localhost:9093/InitializeParticipant/ht0l5q5v", "http://localhost:9093/InitializeParticipant/o9z29duk"
-          ]
-        }
-      ]
-    },
-    {
-      "url": "http://localhost:9092",
-      "experiments": [
-        {
-          "name": "guess2/3",
-          "scheduleFunction": {
-            "name": "firstCome",
-            "parameters": {
-              "minMatch": 3,
-              "maxMatch": 3
-            }
-          },
-          "urls": [
-            "http://localhost:9092/InitializeParticipant/xqp62t3n","http://localhost:9092/InitializeParticipant/8an76a1g", "http://localhost:9092/InitializeParticipant/mmzx6do3"
-          ]
-        }
-      ]
-    },
-    {
-      "url": "http://localhost:9091",
-      "experiments": [
-        {
-          "name": "guess2/3",
-          "scheduleFunction": {
-            "name": "firstCome",
-            "parameters": {
-              "minMatch": 3,
-              "maxMatch": 3
-            }
-          },
-          "urls": [
-            "http://localhost:9091/InitializeParticipant/ja0s6tf0","http://localhost:9091/InitializeParticipant/b2a4smrw","http://localhost:9091/InitializeParticipant/6pe85gqg"
-          ]
-        }
-      ]
+      "name": "guess_two_thirds"
     }
-
   ]
 }
