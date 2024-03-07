@@ -26,8 +26,7 @@ const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = 8060
 const publicKey = fs.readFileSync('./public-key.pem', 'utf8')
 
-
-function getValue(obj, key, defaultValue) {
+function getOrSetValue(obj, key, defaultValue) {
   if(!(key in obj)) {
     obj[key] = defaultValue
   }
@@ -44,13 +43,13 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
     const results = []
     // Get a map of promises for every REST call to the servers
     // then we can wait on all promises to resolve with Promise.all
-    const allProms = otreeIPs.map(s => {
+    const outerPromises = otreeIPs.map(s => {
       const apiUrl = `http://${s}/api/sessions`
       return axios.get(apiUrl, config).then(async res => {
         // For every session on the server we call back to the server
         // to get more participant info. We do the same with promises 
         // and wait on these internal promises resolve.
-        const subProms = res.data.map(session => {
+        const innerPromises = res.data.map(session => {
           const code = session.code
           const experimentName = session.config_name
           const sessionUrl = apiUrl + '/' + code
@@ -65,15 +64,21 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
               })
             })
           })
-        }) //subProms
-        await Promise.all(subProms)
+        }) //innerPromises
+        // Wait for promises in the inner loop (map) to resolve before
+        // movin to the next outer loop.
+        try {
+          await Promise.all(innerPromises)
+        } catch(error) {
+          reject(error)
+        }
       })
     })
-    Promise.all(allProms).then(()=>{
+    Promise.all(outerPromises).then(()=>{
       //console.log(`${JSON.stringify(results,null,2)}`)
       resolve(results)
-    }).catch(e => {
-      reject(e)
+    }).catch(error => {
+      reject(error)
     })
   })
 }
@@ -140,7 +145,6 @@ const validateToken = (req, res, next) => {
 async function main() {
   const matchUsers = 3
   const experiments = {}
-  //const sockets = {}
   /**
    *
    * @type {Map<string, User>}
@@ -150,20 +154,26 @@ async function main() {
   const agreementIds = {}
   const expToEnable = config.experiments.map(e => e.name)
 
-  // Get oTree experiment URLs from servers
-  otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
-  otreeData.forEach(r => {
-    const exp = getValue(experiments, r.experimentName, { 
-      name: r.experimentName,
-      enabled: (expToEnable.includes(r.experimentName)) ? true : false,
-      servers: {} 
+  try {
+    // Get oTree experiment URLs from servers
+    otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
+    // Build experiments object
+    otreeData.forEach(r => {
+      const exp = getOrSetValue(experiments, r.experimentName, { 
+        name: r.experimentName,
+        enabled: (expToEnable.includes(r.experimentName)) ? true : false,
+        servers: {} 
+      })
+      const expUrls = getOrSetValue(exp.servers, r.server, [])
+      if (expUrls.includes(r.experimentUrl)) {
+        return
+      }
+      expUrls.push(r.experimentUrl)
     })
-    const expUrls = getValue(exp.servers, r.server, [])
-    if (expUrls.includes(r.experimentUrl)) {
-      return
-    }
-    expUrls.push(r.experimentUrl)
-  })
+  } catch(error) {
+    console.log(`[ERROR] Failed to retrieve data from oTree server/s reason: ${error.message}`)
+    process.exit(1)
+  }
 
 
 
@@ -434,34 +444,27 @@ async function main() {
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
       const oTreeVars = user.tokenParams.oTreeVars || {}
-      //if (oTreeVars) {
-        // First update user variables on oTree server
-        // then redirect
-        const config = {
-          headers: {
-            'otree-rest-key': otreeRestKey
-          }
+      // First update user variables on oTree server
+      // then redirect
+      const config = {
+        headers: {
+          'otree-rest-key': otreeRestKey
         }
-        const participantCode = expUrl.pathname.split('/').pop()
-        const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
-        axios.post(apiUrl, { "vars": oTreeVars}, config)
-          .then(res => {
-            console.log(`Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`)
-            const sock = user.webSocket
-            // Emit a custom event with the game room URL
-            sock.emit('gameStart', { room: expUrl.toString() });
-            user.changeState("inoTreePages")
-            user.redirectedUrl = expUrl
-          })
-          .catch(err => {
-            console.log(`Error updating ${userId} vars for participant ${participantCode}.`)
-          })
-
-      //} else {
-      //  const sock = user.webSocket
-        // Emit a custom event with the game room URL
-      //  sock.emit('gameStart', { room: expUrl.toString() }); 
-      //}
+      }
+      const participantCode = expUrl.pathname.split('/').pop()
+      const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
+      axios.post(apiUrl, { "vars": oTreeVars}, config)
+        .then(res => {
+          console.log(`Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`)
+          const sock = user.webSocket
+          // Emit a custom event with the game room URL
+          sock.emit('gameStart', { room: expUrl.toString() });
+          user.changeState("inoTreePages")
+          user.redirectedUrl = expUrl
+        })
+        .catch(err => {
+          console.log(`Error updating ${userId} vars for participant ${participantCode}.`)
+        })
     }
   }
 
@@ -469,7 +472,6 @@ async function main() {
   server.listen(port, () => {
     console.log('Waiting room listening on port: ', port);
   });
-
 }
 
 main()
