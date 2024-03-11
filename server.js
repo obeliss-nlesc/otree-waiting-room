@@ -27,6 +27,12 @@ const apiKey = process.env.API_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = 8060
 const publicKey = fs.readFileSync('./public-key.pem', 'utf8')
+/**
+ *
+ * @type {Set<string>}
+ */
+const usedUrls = new Set()
+
 
 function getOrSetValue(obj, key, defaultValue) {
   if(!(key in obj)) {
@@ -49,7 +55,7 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
       const apiUrl = `http://${s}/api/sessions`
       return axios.get(apiUrl, config).then(async res => {
         // For every session on the server we call back to the server
-        // to get more participant info. We do the same with promises 
+        // to get more participant info. We do the same with promises
         // and wait on these internal promises resolve.
         const innerPromises = res.data.map(session => {
           const code = session.code
@@ -87,6 +93,9 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
 
 // Get experiment urls from server and experiment
 function findUrls(exp, minUrls) {
+  if (!exp) {
+    return null
+  }
   const keys = Object.keys(exp.servers).filter(k => {
     return (exp.servers[k].length >= minUrls)
   })
@@ -103,6 +112,7 @@ function findUrls(exp, minUrls) {
 // Put back experiment urls 
 function revertUrls(exp, urls, serverKey) {
   urls.forEach(url => {
+    usedUrls.delete(url)
     if (exp.servers[serverKey].includes(url)) {
       return
     }
@@ -144,8 +154,104 @@ const validateToken = (req, res, next) => {
 };
 
 
+async function getExperimentUrls(experiments) {
+  const expToEnable = config.experiments.map(e => e.name)
+
+  // clear existing URLs first:
+  for (const [name, val] of Object.entries(experiments)) {
+    // console.log(JSON.stringify(val, null, 4))
+    for (const [_, arr] of Object.entries(val.servers)) {
+      arr.splice(0, arr.length)
+    }
+  }
+
+  try {
+    // Get oTree experiment URLs from servers
+    otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
+    // Build experiments object
+    otreeData.forEach(r => {
+      const exp = getOrSetValue(experiments, r.experimentName, {
+        name: r.experimentName,
+        enabled: expToEnable.includes(r.experimentName),
+        servers: {}
+      })
+      const expUrls = getOrSetValue(exp.servers, r.server, [])
+      if (expUrls.includes(r.experimentUrl) || usedUrls.has(r.experimentUrl)) {
+        return
+      }
+      expUrls.push(r.experimentUrl)
+    })
+  } catch (error) {
+    console.log(`[ERROR] Failed to retrieve data from oTree server/s reason: ${error.message}`)
+  }
+}
+
+// Send agree event which will force users to agree before
+// starting the game.
+function agreeGame(users, uuid, agreement, usersDb) {
+  for (let i = 0; i < users.length; i++) {
+    const userId = users[i]
+    const user = usersDb.get(userId)
+    const sock = user.webSocket
+    if(!sock) {
+      console.error(`User ${userId} has not socket!`);
+      return
+    }
+    sock.emit('agree', {uuid: uuid, timeout: agreement.timeout});
+  }
+}
+
+function startReadyGames(experiments, agreementIds, usersDb) {
+  for (const [experimentId, _] of Object.entries(experiments)) {
+    const experiment = experiments[experimentId]
+    const scheduler = experiment.scheduler
+
+    let canMaybeScheduleNext = true;
+    while (canMaybeScheduleNext) {
+      canMaybeScheduleNext = false
+      const conditionObject = scheduler.checkConditionAndReturnUsers(experiments, usedUrls)
+      // Check if there are enough users to start the game
+      if (conditionObject.condition) {
+        canMaybeScheduleNext = true
+        console.log("Enough users; waiting for agreement.")
+        // Generate an agreement object which
+        // waits for all users to 'agree' and
+        // proceed to the game together
+        const uuid = crypto.randomUUID();
+        const gameUsersIds = conditionObject.users.map(u => u.userId)
+        const agreement = new Agreement(uuid,
+            experimentId,
+            gameUsersIds,
+            conditionObject.users.map(u => u.redirectedUrl),
+            conditionObject.server
+        )
+        agreementIds[uuid] = agreement;
+        agreeGame(gameUsersIds, uuid, agreement, usersDb);
+        // Agreement timeout function
+        agreement.startTimeout((agreement, agreedUsersIds, nonAgreedUsersIds) => {
+          if (agreement.isAgreed()) {
+            return
+          }
+          if (agreement.isBroken()){
+            revertUrls(experiments[agreement.experimentId], agreement.urls, agreement.server)
+            agreedUsersIds.forEach(userId => {
+              user = usersDb.get(userId)
+              user.changeState('queued')
+            })
+            nonAgreedUsersIds.forEach(userId => {
+              user = usersDb.get(userId)
+              user.reset()
+            })
+          }
+        })
+      }
+    }
+  }
+}
 
 async function main() {
+  // TODO: matchUsers should be part of the experiments object per experiment
+  const matchUsers = 3
   const experiments = {}
   /**
    *
@@ -166,7 +272,7 @@ async function main() {
     otreeData.forEach(r => {
       const exp = getOrSetValue(experiments, r.experimentName, { 
         name: r.experimentName,
-        enabled: (expToEnable.includes(r.experimentName)) ? true : false,
+        enabled: expToEnable.includes(r.experimentName),
         servers: {},
       })
       const expUrls = getOrSetValue(exp.servers, r.server, [])
@@ -186,8 +292,12 @@ async function main() {
     // attach it to the experiments object
     config.experiments.forEach(e => {
       if (!experiments[e.name]) {
-        return
-      }   
+        experiments[e.name] = {
+          name: e.name,
+          enabled: expToEnable.includes(e.name),
+          servers: {},
+        }
+      }
       if(!SchedulerPlugins.classExists(e.scheduler.type)) {
         throw new Error(`Class ${e.scheduler.type} not found!`)
       }
@@ -201,6 +311,10 @@ async function main() {
     process.exit(1)
   }
 
+  setInterval(async () => {
+    await getExperimentUrls(experiments)
+    startReadyGames(experiments, agreementIds, usersDb)
+  }, 1000)
 
 
   console.log(`Experiments setup:\n${JSON.stringify(experiments, null, 2)}`)
@@ -228,7 +342,7 @@ async function main() {
     res.status(201).json(result)
   })
 
-  
+
   app.get('/api/participants/:participantCode', validateSignature, async (req, res) => {
     const participantCode = req.params.participantCode
     const results = await db.parQuery(`SELECT *
@@ -240,7 +354,7 @@ async function main() {
     })
     res.status(201).json(result)
   })
-  
+
   // Get all participants info
   app.get('/api/participants', validateSignature, async (req, res) => {
     const results = await db.parQuery(`SELECT * FROM otree_participant`)
@@ -353,7 +467,6 @@ async function main() {
         const experiment = experiments[experimentId]
         if (!experiment) {
           console.log(`[WARN] no experiment object found for ${experimentId} and user ${userId}`)
-          return
         }
         const scheduler = experiment.scheduler
         scheduler.queueUser(user)
@@ -363,70 +476,13 @@ async function main() {
         //  users: [] of type Users
         //  waitForCount: int
         // }
-        const conditionObject = scheduler.checkConditionAndReturnUsers()
-        const gameUsers = (conditionObject.condition) ? conditionObject.users : null
         console.log(`User ${userId} in event listener in state ${state}`)
 
-        // Check if there are enough users to start the game
-        if (conditionObject.condition) {
-          // If we have enough users then match them to oTree urls
-          const expUrls = findUrls(experiments[experimentId], gameUsers.length)
-          console.log("Enough users; waiting for agreement.")
-          // Generate an agreement object which 
-          // waits for all users to 'agree' and 
-          // proceed to the game together
-          const uuid = crypto.randomUUID();
-          const gameUsersIds = gameUsers.map(u => u.userId)
-          const agreement = new Agreement(uuid, 
-            experimentId,
-            gameUsersIds,
-            expUrls.urls,
-            expUrls.server
-          )
-          agreementIds[uuid] = agreement;
-          agreeGame(gameUsersIds, uuid, agreement);
-          // Agreement timeout function
-          agreement.startTimeout((agreement, agreedUsersIds, nonAgreedUsersIds) => {
-            if (agreement.isAgreed()) {
-              return
-            }
-            if (agreement.isBroken()){
-              revertUrls(experiments[agreement.experimentId], agreement.urls, agreement.server)
-              agreedUsersIds.forEach(userId => {
-                user = usersDb.get(userId)
-                user.changeState('queued')
-              })
-              nonAgreedUsersIds.forEach(userId => {
-                user = usersDb.get(userId)
-                user.reset()
-              })
-            }
+        user.webSocket.emit("wait", {
+          playersToWaitFor: scheduler.playersToWaitFor(),
+          maxPlayers: matchUsers
         })
-        } else {
-          const queuedUsers = conditionObject.users
-          const playersToWaitFor = conditionObject.waitForCount
-          user.webSocket.emit("wait", { 
-            playersToWaitFor: playersToWaitFor, 
-            maxPlayers: scheduler.min
-          })
-          queuedUsers.forEach(user => {
-            // user = usersDb.get(usegrId)
-            const userId = user.userId
-            if (!user) {
-              console.error(`User ${userId} not found!`)
-              return
-            }
-            const sock = user.webSocket
-            if (!sock) {
-              console.error(`Socket for ${userId} not found!`)
-              return
-            }
-            sock.emit('queueUpdate',{
-              playersToWaitFor: playersToWaitFor, 
-              maxPlayers: scheduler.min
-            })
-          })
-        }//else
+        scheduler.signalUsers()
       })//addListenerForState
       user.changeState("queued");
     })//newUser
@@ -457,21 +513,6 @@ async function main() {
 
   });
 
-  // Send agree event which will force users to agree before
-  // starting the game.
-  function agreeGame(users, uuid, agreement) {
-    for (let i = 0; i < users.length; i++) {
-      const userId = users[i]
-      const user = usersDb.get(userId)
-      const sock = user.webSocket
-      if(!sock) {
-        console.error(`User ${userId} has not socket!`);
-        return
-      }
-      sock.emit('agree', {uuid: uuid, timeout: agreement.timeout}); 
-    }
-  }
-
   // Function to start the game with the specified users
   /**
    *
@@ -489,7 +530,7 @@ async function main() {
       // Set user variables on oTree server
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
-      const oTreeVars = user.tokenParams.oTreeVars || {}
+      const oTreeVars = user.tokenParams?.oTreeVars || {}
       // First update user variables on oTree server
       // then redirect
       const config = {
