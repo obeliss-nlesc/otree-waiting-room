@@ -1,3 +1,6 @@
+// Simple Group by Arrivial Time (GAT) scheduler.
+// This GAT acts as a simple fifo queue with matching 
+// a min ammount of users. 
 class GatScheduler {
   /*
     *
@@ -7,24 +10,31 @@ class GatScheduler {
   constructor(experimentName, queue, params) {
     this.experimentName = experimentName
     this.min = parseInt(params.min)
+
     this.max = parseInt(params.max)
     this.queue = queue
     console.log(`Loaded scheduler params: min ${this.min} max ${this.max}`)
   }
+
   queueUser(userId) {
     this.queue.push(this.experimentName, userId)
   }
+
   checkConditionAndReturnUsers() {
-    if (this.queue.size(this.experimentName) >= this.min) {
-      return this.queue.pop(this.experimentName, this.min)
+    const queueSize = this.queue.size(this.experimentName)
+    if (queueSize >= this.min) {
+      const noToPop = Math.min(queueSize, this.max) 
+      return this.queue.pop(this.experimentName, noToPop)
     }
     return false
   }
+
   waitCount() {
     return this.min - this.queue.size(this.experimentName)
   }
+
   getWaitingUsers() {
-    q = this.queue.getQueue(this.experimentName)
+    const q = this.queue.getQueue(this.experimentName)
     return q.slice(0, this.min)
   }
 
