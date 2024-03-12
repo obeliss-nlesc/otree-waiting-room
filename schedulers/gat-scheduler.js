@@ -13,7 +13,7 @@ class GatScheduler {
     // Max not used
     this.max = parseInt(params.max)
     this.queue = new Queue(this.experimentName)
-    console.log(`Loaded scheduler params: min ${this.min} max ${this.max}`)
+    //console.log(`Loaded scheduler params: min ${this.min} max ${this.max}`)
   }
 
   /*
@@ -22,7 +22,7 @@ class GatScheduler {
   queueUser(user) {
     // Queue user object which allows schedulers to decide on additional parameters
     // passed on in token like age and gender.
-    console.log(`GAT queued user: ${user.userId} params ${JSON.stringify(user.tokenParams)}`)
+    //console.log(`GAT queued user: ${user.userId} params ${JSON.stringify(user.tokenParams)}`)
     this.queue.push(user)
   }
 
