@@ -10,7 +10,7 @@ const fs = require('fs')
 const jwt = require('jsonwebtoken')
 const CryptoJS = require('crypto-js')
 // Use a local queue or a redis queue
-// E.g. const queue = require('./redis-queue.js')
+// E.g. const Queue = require('./redis-queue.js')
 const Queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
