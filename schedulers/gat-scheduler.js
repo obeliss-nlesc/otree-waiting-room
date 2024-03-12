@@ -13,7 +13,7 @@ class GatScheduler {
     // Max not used
     this.max = parseInt(params.max)
     this.queue = new Queue(this.experimentName)
-    //console.log(`Loaded scheduler params: min ${this.min} max ${this.max}`)
+    console.log(`Loaded GAT scheduler params: min ${this.min} max ${this.max}`)
   }
 
   /*

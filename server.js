@@ -15,7 +15,8 @@ const Queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
-const classLoader = require('./class_loader.js')
+// const classLoader = require('./class_loader.js')
+const ClassLoader = require('./class_loader.js')
 const config = require('./config.json')
 
 
@@ -154,7 +155,8 @@ async function main() {
   const userMapping = {}
   const agreementIds = {}
   const expToEnable = config.experiments.map(e => e.name)
-  const SchedulerPluggins = await classLoader('./schedulers')
+  // Load schedulers from directory
+  const SchedulerPluggins = new ClassLoader('./schedulers')
 
   try {
     // Get oTree experiment URLs from servers
@@ -177,23 +179,26 @@ async function main() {
     process.exit(1)
   }
 
-  // Go through each experiment config and 
-  // load the appropriate scheduler class and
-  // attach it to the experiments object
-  config.experiments.forEach(e => {
-    if (!experiments[e.name]) {
-      return
-    }   
-    try {
+  try {
+    // Go through each experiment config and 
+    // load the appropriate scheduler class and
+    // attach it to the experiments object
+    config.experiments.forEach(e => {
+      if (!experiments[e.name]) {
+        return
+      }   
+      if(!SchedulerPluggins.classExists(e.scheduler.type)) {
+        throw new Error(`Class ${e.scheduler.type} not found!`)
+      }
       // Instantiate a scheduler class and pass the queue to 
       // be managed by the scheduler
-      const scheduler = new (SchedulerPluggins(e.scheduler.type))(e.name, Queue, e.scheduler.params)
+      const scheduler = new (SchedulerPluggins.getClass(e.scheduler.type))(e.name, Queue, e.scheduler.params)
       experiments[e.name]['scheduler'] = scheduler
-    } catch(error) {
-      console.log(`[ERROR] could not load scheduler ${e.scheduler.type}`)
-      console.log(error.message)
-    }
-  })
+    })
+  } catch(error) {
+    console.log(`[ERROR] Failed to load scheduler/s ${error.message}`)
+    process.exit(1)
+  }
 
 
 
