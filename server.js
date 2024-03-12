@@ -186,6 +186,8 @@ async function main() {
       return
     }   
     try {
+      // Instantiate a scheduler class and pass the queue to 
+      // be managed by the scheduler
       const scheduler = new (getScheduler(e.scheduler.type))(e.name, queue, e.scheduler.params)
       experiments[e.name]['scheduler'] = scheduler
     } catch(error) {
@@ -260,9 +262,8 @@ async function main() {
 
   app.delete('/api/experiments/:experimentId', validateSignature, (req, res) => {
     const experimentId = req.params.experimentId
-    queue.deleteQueue(experimentId).then(() => {
-      res.status(201).json({message: `Queue ${experimentId} deleted.`})
-    })
+    delete experiments[experimentId]
+    res.status(201).json({message: `Queue ${experimentId} deleted.`})
   })
 
   app.get('/api/experiments', validateSignature, async (req, res) => {
@@ -379,8 +380,6 @@ async function main() {
             }
         })
         } else {
-          // To use Redis you need to await on the queue.
-          // let queuedUsers = await queue.getQueue(experimentId)
           const queuedUsers = scheduler.getWaitingUsers()
           const playersToWaitFor = scheduler.waitCount()
           user.webSocket.emit("wait", { 
