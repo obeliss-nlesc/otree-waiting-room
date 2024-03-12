@@ -15,7 +15,7 @@ test("test GAT scheduler", () => {
   })
   assert.strictEqual(scheduler.queue.size(), 7)
 
-  conditionObject = scheduler.checkConditionAndReturnUsers()
+  let conditionObject = scheduler.checkConditionAndReturnUsers()
   assert.strictEqual(conditionObject.condition, true)
   assert.strictEqual(conditionObject.users.length, 3)
   assert.strictEqual(conditionObject.waitForCount, 0)
