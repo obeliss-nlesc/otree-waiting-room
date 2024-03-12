@@ -1,7 +1,14 @@
 {
   "experiments": [
     {
-      "name": "guess_two_thirds"
+      "name": "guess_two_thirds",
+      "scheduler": {
+        "type": "GatScheduler",
+        "params": {
+          "min": "3",
+          "max": "5"
+        }
+      }
     }
   ]
 }

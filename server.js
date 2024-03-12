@@ -15,6 +15,7 @@ const queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
+const classLoader = require('./class_loader.js')
 const config = require('./config.json')
 
 
@@ -142,6 +143,7 @@ const validateToken = (req, res, next) => {
 };
 
 
+
 async function main() {
   const matchUsers = 3
   const experiments = {}
@@ -149,10 +151,11 @@ async function main() {
    *
    * @type {Map<string, User>}
    */
-  const usersDb = new Map()
+  const usersDb = new Map() 
   const userMapping = {}
   const agreementIds = {}
   const expToEnable = config.experiments.map(e => e.name)
+  const getScheduler = await classLoader('./schedulers')
 
   try {
     // Get oTree experiment URLs from servers
@@ -162,7 +165,7 @@ async function main() {
       const exp = getOrSetValue(experiments, r.experimentName, { 
         name: r.experimentName,
         enabled: (expToEnable.includes(r.experimentName)) ? true : false,
-        servers: {} 
+        servers: {},
       })
       const expUrls = getOrSetValue(exp.servers, r.server, [])
       if (expUrls.includes(r.experimentUrl)) {
@@ -174,6 +177,21 @@ async function main() {
     console.log(`[ERROR] Failed to retrieve data from oTree server/s reason: ${error.message}`)
     process.exit(1)
   }
+
+  // Go through each experiment config and 
+  // load the appropriate scheduler class and
+  // attach it to the experiments object
+  config.experiments.forEach(e => {
+    if (!experiments[e.name]) {
+      return
+    }   
+    try {
+      const scheduler = new (getScheduler(e.scheduler.type))(e.name, queue, e.scheduler.params)
+      experiments[e.name]['scheduler'] = scheduler
+    } catch(error) {
+      console.log(`[ERROR] could not load scheduler ${e.scheduler.type}`)
+    }
+  })
 
 
 
@@ -314,21 +332,26 @@ async function main() {
       }
 
       user.addListenerForState("queued", async (user, state) => {
-        let userId = user.userId
-        let experimentId = user.experimentId
-        // To use Redis you need to await on the queue.
-        // let queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
-        let queuedUsers = queue.pushAndGetQueue(experimentId, userId)
-
+        const userId = user.userId
+        const experimentId = user.experimentId
+        const experiment = experiments[experimentId]
+        if (!experiment) {
+          console.log(`[WARN] no experiment object found for ${experimentId} and user ${userId}`)
+          return
+        }
+        const scheduler = experiment.scheduler
+        scheduler.queueUser(userId)
+        const gameUsers = scheduler.checkConditionAndReturnUsers()
         console.log(`User ${userId} in event listener in state ${state}`)
 
         // Check if there are enough users to start the game
-        if (queuedUsers.length >= matchUsers) {
-          // To use Redis you need to await on the queue.
-          // const gameUsers = await queue.pop(experimentId, matchUsers)
-          const gameUsers = queue.pop(experimentId, matchUsers)
-          const expUrls = findUrls(experiments[experimentId], matchUsers)
+        if (gameUsers) {
+          // If we have enough users then match them to oTree urls
+          const expUrls = findUrls(experiments[experimentId], gameUsers.length)
           console.log("Enough users; waiting for agreement.")
+          // Generate an agreement object which 
+          // waits for all users to 'agree' and 
+          // proceed to the game together
           const uuid = crypto.randomUUID();
           const agreement = new Agreement(uuid, 
             experimentId,
@@ -358,11 +381,11 @@ async function main() {
         } else {
           // To use Redis you need to await on the queue.
           // let queuedUsers = await queue.getQueue(experimentId)
-          let queuedUsers = queue.getQueue(experimentId)
-          let playersToWaitFor = matchUsers - queuedUsers.length;
+          const queuedUsers = scheduler.getWaitingUsers()
+          const playersToWaitFor = scheduler.waitCount()
           user.webSocket.emit("wait", { 
             playersToWaitFor: playersToWaitFor, 
-            maxPlayers: matchUsers
+            maxPlayers: scheduler.min
           })
           queuedUsers.forEach(userId => {
             user = usersDb.get(userId)
@@ -377,7 +400,7 @@ async function main() {
             }
             sock.emit('queueUpdate',{
               playersToWaitFor: playersToWaitFor, 
-              maxPlayers: matchUsers
+              maxPlayers: scheduler.min
             })
           })
         }//else
