@@ -21,12 +21,12 @@ function clone(o) {
   return JSON.parse(JSON.stringify(o))
 }
 
-const users = ['user001', 'user002', 'user003']
+const users = ['user001', 'user002', 'user003', 'user004', 'user005']
 
 const userTokens = users.map(u => {
   const userData = clone(userTemplate)
   userData.userId = u
-  return jwt.sign(userData, privateKey, {algorithm: 'RS256', expiresIn: '12h'})
+  return jwt.sign(userData, privateKey, {algorithm: 'RS256', expiresIn: '24h'})
 })
 
 userTokens.forEach(t => {

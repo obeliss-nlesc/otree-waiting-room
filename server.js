@@ -11,7 +11,7 @@ const jwt = require('jsonwebtoken')
 const CryptoJS = require('crypto-js')
 // Use a local queue or a redis queue
 // E.g. const queue = require('./redis-queue.js')
-const queue = require('./local-queue.js')
+const Queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
@@ -187,10 +187,11 @@ async function main() {
     try {
       // Instantiate a scheduler class and pass the queue to 
       // be managed by the scheduler
-      const scheduler = new (SchedulerPluggins(e.scheduler.type))(e.name, queue, e.scheduler.params)
+      const scheduler = new (SchedulerPluggins(e.scheduler.type))(e.name, Queue, e.scheduler.params)
       experiments[e.name]['scheduler'] = scheduler
     } catch(error) {
       console.log(`[ERROR] could not load scheduler ${e.scheduler.type}`)
+      console.log(error.message)
     }
   })
 
@@ -340,12 +341,19 @@ async function main() {
           return
         }
         const scheduler = experiment.scheduler
-        scheduler.queueUser(userId)
-        const gameUsers = scheduler.checkConditionAndReturnUsers()
+        scheduler.queueUser(user)
+        // Condition object returns
+        // { 
+        //  condition: true|false
+        //  users: [] of type Users
+        //  waitForCount: int
+        // }
+        const conditionObject = scheduler.checkConditionAndReturnUsers()
+        const gameUsers = (conditionObject.condition) ? conditionObject.users : null
         console.log(`User ${userId} in event listener in state ${state}`)
 
         // Check if there are enough users to start the game
-        if (gameUsers) {
+        if (conditionObject.condition) {
           // If we have enough users then match them to oTree urls
           const expUrls = findUrls(experiments[experimentId], gameUsers.length)
           console.log("Enough users; waiting for agreement.")
@@ -353,40 +361,42 @@ async function main() {
           // waits for all users to 'agree' and 
           // proceed to the game together
           const uuid = crypto.randomUUID();
+          const gameUsersIds = gameUsers.map(u => u.userId)
           const agreement = new Agreement(uuid, 
             experimentId,
-            gameUsers,
+            gameUsersIds,
             expUrls.urls,
             expUrls.server
           )
           agreementIds[uuid] = agreement;
-          agreeGame(gameUsers, uuid, agreement);
+          agreeGame(gameUsersIds, uuid, agreement);
           // Agreement timeout function
-          agreement.startTimeout((agreement, agreedUsers, nonAgreedUsers) => {
+          agreement.startTimeout((agreement, agreedUsersIds, nonAgreedUsersIds) => {
             if (agreement.isAgreed()) {
               return
             }
             if (agreement.isBroken()){
               revertUrls(experiments[agreement.experimentId], agreement.urls, agreement.server)
-              agreedUsers.forEach(userId => {
+              agreedUsersIds.forEach(userId => {
                 user = usersDb.get(userId)
                 user.changeState('queued')
               })
-              nonAgreedUsers.forEach(userId => {
+              nonAgreedUsersIds.forEach(userId => {
                 user = usersDb.get(userId)
                 user.reset()
               })
             }
         })
         } else {
-          const queuedUsers = scheduler.getWaitingUsers()
-          const playersToWaitFor = scheduler.waitCount()
+          const queuedUsers = conditionObject.users
+          const playersToWaitFor = conditionObject.waitForCount
           user.webSocket.emit("wait", { 
             playersToWaitFor: playersToWaitFor, 
             maxPlayers: scheduler.min
           })
-          queuedUsers.forEach(userId => {
-            user = usersDb.get(userId)
+          queuedUsers.forEach(user => {
+            // user = usersDb.get(usegrId)
+            const userId = user.userId
             if (!user) {
               console.error(`User ${userId} not found!`)
               return
