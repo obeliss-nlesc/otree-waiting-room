@@ -37,7 +37,6 @@ class GatScheduler {
     const q = this.queue.getQueue(this.experimentName)
     return q.slice(0, this.min)
   }
-
 }
 
 module.exports = function() {

@@ -145,7 +145,6 @@ const validateToken = (req, res, next) => {
 
 
 async function main() {
-  const matchUsers = 3
   const experiments = {}
   /**
    *
@@ -155,7 +154,7 @@ async function main() {
   const userMapping = {}
   const agreementIds = {}
   const expToEnable = config.experiments.map(e => e.name)
-  const getScheduler = await classLoader('./schedulers')
+  const SchedulerPluggins = await classLoader('./schedulers')
 
   try {
     // Get oTree experiment URLs from servers
@@ -188,7 +187,7 @@ async function main() {
     try {
       // Instantiate a scheduler class and pass the queue to 
       // be managed by the scheduler
-      const scheduler = new (getScheduler(e.scheduler.type))(e.name, queue, e.scheduler.params)
+      const scheduler = new (SchedulerPluggins(e.scheduler.type))(e.name, queue, e.scheduler.params)
       experiments[e.name]['scheduler'] = scheduler
     } catch(error) {
       console.log(`[ERROR] could not load scheduler ${e.scheduler.type}`)
