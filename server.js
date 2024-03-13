@@ -156,7 +156,8 @@ async function main() {
   const agreementIds = {}
   const expToEnable = config.experiments.map(e => e.name)
   // Load schedulers from directory
-  const SchedulerPluggins = new ClassLoader('./schedulers')
+  // initialize returns a new ClassLoader
+  const SchedulerPluggins = await ClassLoader.initialize('./schedulers')
 
   try {
     // Get oTree experiment URLs from servers

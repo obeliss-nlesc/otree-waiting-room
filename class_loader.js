@@ -6,35 +6,45 @@ const path = require('path')
 // walks a directory and load classes to classMap 
 // Map
 class ClassLoader {
-  constructor(classPath) {
-    this.classMap = new Map()
-    this.classPath = classPath
-    this.#recursiveWalk(this.classPath)
+  // Private property
+  #classMap = null
+  /*
+    * @private constructor. Should not be 
+    * called outside
+    */
+  constructor(classMap) {
+    this.#classMap = classMap
   }
 
-  async #recursiveWalk(dirPath) {
-    const stat = await fs.stat(dirPath)
-    if (stat.isDirectory()) {
-      const files = await fs.readdir(dirPath)
-        for (let i = 0; i < files.length; i++) {
-          const filePath = path.join('./', dirPath, files[i])
-          await this.#recursiveWalk(filePath)
+  static async initialize(classPath) {
+    const classMap = new Map()
+    async function recursiveWalk(dirPath) {
+      const stat = await fs.stat(dirPath)
+      if (stat.isDirectory()) {
+        const files = await fs.readdir(dirPath)
+          for (let i = 0; i < files.length; i++) {
+            const filePath = path.join('./', dirPath, files[i])
+            await recursiveWalk(filePath)
+          }
+      } else {
+        const o = require('./'+dirPath)()
+        if (o && o.name && o.class) {
+          classMap.set(o.name, o.class)
         }
-    } else {
-      const o = require('./'+dirPath)()
-      if (o && o.name && o.class) {
-        this.classMap.set(o.name, o.class)
       }
     }
+    await recursiveWalk(classPath)
+    return new ClassLoader(classMap)
   }
+
 
 
   getClass(className) {
-    return this.classMap.get(className)
+    return this.#classMap.get(className)
   }
 
   classExists(className) {
-    return this.classMap.has(className)
+    return this.#classMap.has(className)
   }
 }
 
