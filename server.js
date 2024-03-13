@@ -10,11 +10,13 @@ const fs = require('fs')
 const jwt = require('jsonwebtoken')
 const CryptoJS = require('crypto-js')
 // Use a local queue or a redis queue
-// E.g. const queue = require('./redis-queue.js')
-const queue = require('./local-queue.js')
+// E.g. const Queue = require('./redis-queue.js')
+const Queue = require('./local-queue.js')
 const db = require('./postgres-db')
 const User = require('./user.js')
 const Agreement = require('./agreement.js')
+// const classLoader = require('./class_loader.js')
+const ClassLoader = require('./class_loader.js')
 const config = require('./config.json')
 
 
@@ -142,17 +144,20 @@ const validateToken = (req, res, next) => {
 };
 
 
+
 async function main() {
-  const matchUsers = 3
   const experiments = {}
   /**
    *
    * @type {Map<string, User>}
    */
-  const usersDb = new Map()
+  const usersDb = new Map() 
   const userMapping = {}
   const agreementIds = {}
   const expToEnable = config.experiments.map(e => e.name)
+  // Load schedulers from directory
+  // initialize returns a new ClassLoader
+  const SchedulerPlugins = await ClassLoader.initialize('./schedulers')
 
   try {
     // Get oTree experiment URLs from servers
@@ -162,7 +167,7 @@ async function main() {
       const exp = getOrSetValue(experiments, r.experimentName, { 
         name: r.experimentName,
         enabled: (expToEnable.includes(r.experimentName)) ? true : false,
-        servers: {} 
+        servers: {},
       })
       const expUrls = getOrSetValue(exp.servers, r.server, [])
       if (expUrls.includes(r.experimentUrl)) {
@@ -172,6 +177,27 @@ async function main() {
     })
   } catch(error) {
     console.log(`[ERROR] Failed to retrieve data from oTree server/s reason: ${error.message}`)
+    process.exit(1)
+  }
+
+  try {
+    // Go through each experiment config and 
+    // load the appropriate scheduler class and
+    // attach it to the experiments object
+    config.experiments.forEach(e => {
+      if (!experiments[e.name]) {
+        return
+      }   
+      if(!SchedulerPlugins.classExists(e.scheduler.type)) {
+        throw new Error(`Class ${e.scheduler.type} not found!`)
+      }
+      // Instantiate a scheduler class and pass the queue to 
+      // be managed by the scheduler
+      const scheduler = new (SchedulerPlugins.getClass(e.scheduler.type))(e.name, Queue, e.scheduler.params)
+      experiments[e.name]['scheduler'] = scheduler
+    })
+  } catch(error) {
+    console.log(`[ERROR] Failed to load scheduler/s ${error.message}`)
     process.exit(1)
   }
 
@@ -242,9 +268,8 @@ async function main() {
 
   app.delete('/api/experiments/:experimentId', validateSignature, (req, res) => {
     const experimentId = req.params.experimentId
-    queue.deleteQueue(experimentId).then(() => {
-      res.status(201).json({message: `Queue ${experimentId} deleted.`})
-    })
+    delete experiments[experimentId]
+    res.status(201).json({message: `Queue ${experimentId} deleted.`})
   })
 
   app.get('/api/experiments', validateSignature, async (req, res) => {
@@ -314,58 +339,70 @@ async function main() {
       }
 
       user.addListenerForState("queued", async (user, state) => {
-        let userId = user.userId
-        let experimentId = user.experimentId
-        // To use Redis you need to await on the queue.
-        // let queuedUsers = await queue.pushAndGetQueue(experimentId, userId)
-        let queuedUsers = queue.pushAndGetQueue(experimentId, userId)
-
+        const userId = user.userId
+        const experimentId = user.experimentId
+        const experiment = experiments[experimentId]
+        if (!experiment) {
+          console.log(`[WARN] no experiment object found for ${experimentId} and user ${userId}`)
+          return
+        }
+        const scheduler = experiment.scheduler
+        scheduler.queueUser(user)
+        // Condition object returns
+        // { 
+        //  condition: true|false
+        //  users: [] of type Users
+        //  waitForCount: int
+        // }
+        const conditionObject = scheduler.checkConditionAndReturnUsers()
+        const gameUsers = (conditionObject.condition) ? conditionObject.users : null
         console.log(`User ${userId} in event listener in state ${state}`)
 
         // Check if there are enough users to start the game
-        if (queuedUsers.length >= matchUsers) {
-          // To use Redis you need to await on the queue.
-          // const gameUsers = await queue.pop(experimentId, matchUsers)
-          const gameUsers = queue.pop(experimentId, matchUsers)
-          const expUrls = findUrls(experiments[experimentId], matchUsers)
+        if (conditionObject.condition) {
+          // If we have enough users then match them to oTree urls
+          const expUrls = findUrls(experiments[experimentId], gameUsers.length)
           console.log("Enough users; waiting for agreement.")
+          // Generate an agreement object which 
+          // waits for all users to 'agree' and 
+          // proceed to the game together
           const uuid = crypto.randomUUID();
+          const gameUsersIds = gameUsers.map(u => u.userId)
           const agreement = new Agreement(uuid, 
             experimentId,
-            gameUsers,
+            gameUsersIds,
             expUrls.urls,
             expUrls.server
           )
           agreementIds[uuid] = agreement;
-          agreeGame(gameUsers, uuid, agreement);
+          agreeGame(gameUsersIds, uuid, agreement);
           // Agreement timeout function
-          agreement.startTimeout((agreement, agreedUsers, nonAgreedUsers) => {
+          agreement.startTimeout((agreement, agreedUsersIds, nonAgreedUsersIds) => {
             if (agreement.isAgreed()) {
               return
             }
             if (agreement.isBroken()){
               revertUrls(experiments[agreement.experimentId], agreement.urls, agreement.server)
-              agreedUsers.forEach(userId => {
+              agreedUsersIds.forEach(userId => {
                 user = usersDb.get(userId)
                 user.changeState('queued')
               })
-              nonAgreedUsers.forEach(userId => {
+              nonAgreedUsersIds.forEach(userId => {
                 user = usersDb.get(userId)
                 user.reset()
               })
             }
         })
         } else {
-          // To use Redis you need to await on the queue.
-          // let queuedUsers = await queue.getQueue(experimentId)
-          let queuedUsers = queue.getQueue(experimentId)
-          let playersToWaitFor = matchUsers - queuedUsers.length;
+          const queuedUsers = conditionObject.users
+          const playersToWaitFor = conditionObject.waitForCount
           user.webSocket.emit("wait", { 
             playersToWaitFor: playersToWaitFor, 
-            maxPlayers: matchUsers
+            maxPlayers: scheduler.min
           })
-          queuedUsers.forEach(userId => {
-            user = usersDb.get(userId)
+          queuedUsers.forEach(user => {
+            // user = usersDb.get(usegrId)
+            const userId = user.userId
             if (!user) {
               console.error(`User ${userId} not found!`)
               return
@@ -377,7 +414,7 @@ async function main() {
             }
             sock.emit('queueUpdate',{
               playersToWaitFor: playersToWaitFor, 
-              maxPlayers: matchUsers
+              maxPlayers: scheduler.min
             })
           })
         }//else
