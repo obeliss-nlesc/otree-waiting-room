@@ -5,8 +5,7 @@
       "scheduler": {
         "type": "GatScheduler",
         "params": {
-          "min": "3",
-          "max": "5"
+          "min": "3"
         }
       }
     }

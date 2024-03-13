@@ -4,16 +4,14 @@
 class GatScheduler {
   /*
     *
-    * @type params { min: int, max: int }
+    * @type params { min: int }
     * @type queue 
     */
   constructor(experimentName, Queue, params) {
     this.experimentName = experimentName
     this.min = parseInt(params.min)
-    // Max not used
-    this.max = parseInt(params.max)
     this.queue = new Queue(this.experimentName)
-    console.log(`Loaded GAT scheduler params: min ${this.min} max ${this.max}`)
+    console.log(`Loaded GAT scheduler params: min ${this.min}`)
   }
 
   /*

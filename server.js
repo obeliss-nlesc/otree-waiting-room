@@ -157,7 +157,7 @@ async function main() {
   const expToEnable = config.experiments.map(e => e.name)
   // Load schedulers from directory
   // initialize returns a new ClassLoader
-  const SchedulerPluggins = await ClassLoader.initialize('./schedulers')
+  const SchedulerPlugins = await ClassLoader.initialize('./schedulers')
 
   try {
     // Get oTree experiment URLs from servers
@@ -188,12 +188,12 @@ async function main() {
       if (!experiments[e.name]) {
         return
       }   
-      if(!SchedulerPluggins.classExists(e.scheduler.type)) {
+      if(!SchedulerPlugins.classExists(e.scheduler.type)) {
         throw new Error(`Class ${e.scheduler.type} not found!`)
       }
       // Instantiate a scheduler class and pass the queue to 
       // be managed by the scheduler
-      const scheduler = new (SchedulerPluggins.getClass(e.scheduler.type))(e.name, Queue, e.scheduler.params)
+      const scheduler = new (SchedulerPlugins.getClass(e.scheduler.type))(e.name, Queue, e.scheduler.params)
       experiments[e.name]['scheduler'] = scheduler
     })
   } catch(error) {
