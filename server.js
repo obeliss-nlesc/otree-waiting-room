@@ -282,10 +282,19 @@ async function main() {
   app.get('/room/:experimentId', validateToken, async (req, res) => {
     const params = req.user
     const userId = params.userId
+    // Check if token parameter matches url
+    if (params.experimentId != req.params.experimentId) {
+      console.log('[WARN] token experimentId and url do not match!')
+      res.status(404).sendFile(__dirname + '/webpage_templates/404.html')
+      return
+    }
+
+    // Check if experiment exists
     params.experimentId = req.params.experimentId
     const exp = experiments[params.experimentId]
     if (!exp || !exp.enabled){
-      res.status(404).send()
+      console.log(`[WARN] experiment ${params.experimentId} not found!`)
+      res.status(404).sendFile(__dirname + '/webpage_templates/404.html')
       return
     }
     const user = usersDb.get(userId) || new User(userId, params.experimentId)
