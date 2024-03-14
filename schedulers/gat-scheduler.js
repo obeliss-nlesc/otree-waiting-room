@@ -28,6 +28,10 @@ class GatScheduler {
     return Math.max(0, this.min - this.queue.size())
   }
 
+  minPlayersNeeded() {
+    return this.min
+  }
+
   signalUsers() {
     const playersToWaitFor = this.playersToWaitFor()
     this.queue.getQueue().forEach(user => {

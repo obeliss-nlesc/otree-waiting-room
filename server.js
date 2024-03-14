@@ -158,7 +158,7 @@ async function getExperimentUrls(experiments) {
   const expToEnable = config.experiments.map(e => e.name)
 
   // clear existing URLs first:
-  for (const [name, val] of Object.entries(experiments)) {
+  for (const [_, val] of Object.entries(experiments)) {
     // console.log(JSON.stringify(val, null, 4))
     for (const [_, arr] of Object.entries(val.servers)) {
       arr.splice(0, arr.length)
@@ -250,8 +250,6 @@ function startReadyGames(experiments, agreementIds, usersDb) {
 }
 
 async function main() {
-  // TODO: matchUsers should be part of the experiments object per experiment
-  const matchUsers = 3
   const experiments = {}
   /**
    *
@@ -480,7 +478,7 @@ async function main() {
 
         user.webSocket.emit("wait", {
           playersToWaitFor: scheduler.playersToWaitFor(),
-          maxPlayers: matchUsers
+          maxPlayers: scheduler.minPlayersNeeded()
         })
         scheduler.signalUsers()
       })//addListenerForState
