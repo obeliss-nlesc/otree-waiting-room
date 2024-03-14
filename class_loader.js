@@ -1,6 +1,12 @@
 const fs = require('fs').promises
 const path = require('path')
 
+class HiddenObject {
+  constructor(classMap) {
+    this.classMap = classMap
+  }
+}
+
 // Class for dynamically loading class plugins. 
 // The inner function recursiveWalk, recursively 
 // walks a directory and load classes to classMap 
@@ -12,8 +18,11 @@ class ClassLoader {
     * @private constructor. Should not be 
     * called outside
     */
-  constructor(classMap) {
-    this.#classMap = classMap
+  constructor(hiddenObject) {
+    if(!(hiddenObject instanceof HiddenObject)) {
+      throw new TypeError("ClassLoader is not constructable. Use ClassLoader.initialize().")
+    }
+    this.#classMap = hiddenObject.classMap
   }
 
   static async initialize(classPath) {
@@ -34,7 +43,7 @@ class ClassLoader {
       }
     }
     await recursiveWalk(classPath)
-    return new ClassLoader(classMap)
+    return new ClassLoader(new HiddenObject(classMap))
   }
 
 
