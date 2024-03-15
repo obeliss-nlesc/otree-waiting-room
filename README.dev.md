@@ -1,3 +1,7 @@
+## Developing
+
+Please run `prettier --write .` before you make a commit, or let your IDE handle it.
+
 ## Using Redis queue option
 
 By default, the waiting room uses a local queue. To switch to Redis, first:
