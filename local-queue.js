@@ -30,7 +30,7 @@ class LocalQueue {
   }
 
   isEmpty() {
-    return (this.queue.length === 0)
+    return this.queue.length === 0
   }
 
   size() {
@@ -39,4 +39,3 @@ class LocalQueue {
 }
 
 module.exports = LocalQueue
-

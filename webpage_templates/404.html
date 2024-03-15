@@ -1,49 +1,56 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<title>Waiting Room</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-<style>
-.container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+  <title>Waiting Room</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" />
+  <style>
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-.loader {
-  border: 16px solid #f3f3f3;
-  border-radius: 50%;
-  border-top: 16px solid #3498db;
-  width: 120px;
-  height: 120px;
-  -webkit-animation: spin 2s linear infinite; /* Safari */
-  animation: spin 2s linear infinite;
-}
+    .loader {
+      border: 16px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 16px solid #3498db;
+      width: 120px;
+      height: 120px;
+      -webkit-animation: spin 2s linear infinite; /* Safari */
+      animation: spin 2s linear infinite;
+    }
 
-.timer {
- text-align: center;
- font-size: 60px;
- margin-top: 0px;
-}
+    .timer {
+      text-align: center;
+      font-size: 60px;
+      margin-top: 0px;
+    }
 
-/* Safari */
-@-webkit-keyframes spin {
-  0% { -webkit-transform: rotate(0deg); }
-  100% { -webkit-transform: rotate(360deg); }
-}
+    /* Safari */
+    @-webkit-keyframes spin {
+      0% {
+        -webkit-transform: rotate(0deg);
+      }
+      100% {
+        -webkit-transform: rotate(360deg);
+      }
+    }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 
-<body>
-  <div class="w3-container">
-    <div id="404Div" class="w3-center w3-margin">
-      <p>Oops, something went wrong!!!</p>
+  <body>
+    <div class="w3-container">
+      <div id="404Div" class="w3-center w3-margin">
+        <p>Oops, something went wrong!!!</p>
+      </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>
-
