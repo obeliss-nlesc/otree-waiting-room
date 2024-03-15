@@ -1,6 +1,6 @@
-const Redis = require('ioredis')
+const Redis = require("ioredis")
 // Read .env file for env variables
-require('dotenv').config()
+require("dotenv").config()
 
 class RedisQueue {
   constructor(queueName) {
@@ -12,7 +12,7 @@ class RedisQueue {
 
   async push(item) {
     const exists = await this.redis.lpos(this.queueName, item)
-    if(exists === null) {
+    if (exists === null) {
       await redis.rpush(this.queueName, item)
     }
   }
@@ -20,7 +20,7 @@ class RedisQueue {
   async pushAndGetQueue(item) {
     // Check if the element already exists in the list
     const exists = await this.redis.lpos(this.queueName, item)
-    if(exists === null) {
+    if (exists === null) {
       await redis.rpush(this.queueName, item)
     }
     return redis.lrange(this.queueName, 0, -1)
@@ -40,9 +40,8 @@ class RedisQueue {
   }
 
   async size() {
-    return await this.redis.llen(this.queueName);
+    return await this.redis.llen(this.queueName)
   }
-
 }
 
 module.exports = RedisQueue

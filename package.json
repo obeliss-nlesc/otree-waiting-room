@@ -24,6 +24,7 @@
     "socket.io": "^4.7.0"
   },
   "devDependencies": {
-    "eslint": "^8.53.0"
+    "eslint": "^8.53.0",
+    "prettier": "3.2.5"
   }
 }
