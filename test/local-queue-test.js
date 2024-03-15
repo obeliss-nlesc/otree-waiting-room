@@ -4,7 +4,7 @@ const LocalQueue = require("../local-queue")
 
 test("test local queue", () => {
 	const queueName = "name1";
-  localQueue = new LocalQueue(queueName)
+	const localQueue = new LocalQueue(queueName)
 	localQueue.push(123);
 	localQueue.push(456);
 	localQueue.push(789);

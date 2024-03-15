@@ -41,7 +41,7 @@
 <body>
   <div class="w3-container">
     <div id="loaderDiv" class="w3-container w3-hide w3-center">
-      <button id="loaderDiv" class="w3-button w3-hover-white w3-jumbo">
+      <button id="loaderButton" class="w3-button w3-hover-white w3-jumbo">
         <div class="loader"></div>
       </button>
     </div>
@@ -94,10 +94,10 @@
     })
     function setTimerAndShow(id, timeSeconds) {
       const p = document.getElementById(id)
-      seconds = timeSeconds
+      let seconds = timeSeconds
       p.innerText = seconds
       showDiv(id)
-      interval = setInterval(() => {
+      const interval = setInterval(() => {
         seconds -= 1
         p.innerText = seconds
         if (seconds <= 0) {
@@ -145,7 +145,7 @@
       })
     })
 
-    // Server instrcuts us to wait for more players.
+    // Server instructs us to wait for more players.
     // Server passes the number of players we are waiting for.
     socket.on('wait', (data) => {
       console.log('[SOCKET][wait] ', data)

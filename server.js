@@ -63,18 +63,16 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
           const sessionUrl = apiUrl + '/' + code
           return axios.get(sessionUrl, config).then(res => {
             res.data.participants.forEach(p => {
-              experimentUrl = `http://${s}/InitializeParticipant/${p.code}`
-              serverName = s
               results.push({
                 "server": s,
                 "experimentName": experimentName,
-                "experimentUrl": experimentUrl
+                "experimentUrl": `http://${s}/InitializeParticipant/${p.code}`
               })
             })
           })
         }) //innerPromises
         // Wait for promises in the inner loop (map) to resolve before
-        // movin to the next outer loop.
+        // moving to the next outer loop.
         try {
           await Promise.all(innerPromises)
         } catch(error) {
@@ -89,24 +87,6 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
       reject(error)
     })
   })
-}
-
-// Get experiment urls from server and experiment
-function findUrls(exp, minUrls) {
-  if (!exp) {
-    return null
-  }
-  const keys = Object.keys(exp.servers).filter(k => {
-    return (exp.servers[k].length >= minUrls)
-  })
-  if(keys.length > 0) {
-    const urls = exp.servers[keys[0]].splice(0, minUrls)
-    return {
-      server: keys[0],
-      urls: urls
-    }
-  }
-  return null
 }
 
 // Put back experiment urls 
@@ -130,7 +110,7 @@ const validateSignature = (req, res, next) => {
   const dataWordArray = CryptoJS.enc.Utf8.parse(dataToVerify);
   const calculatedSignatureWordArray = CryptoJS.HmacSHA256(dataWordArray, keyWordArray);
   const calculatedSignatureBase64 = CryptoJS.enc.Base64.stringify(calculatedSignatureWordArray);
-  if(calculatedSignatureBase64 == xSignature) {
+  if(calculatedSignatureBase64 === xSignature) {
     next()
   } else {
     res.status(401).json({ message: 'Unauthorized: Invalid signature'})
@@ -235,11 +215,11 @@ function startReadyGames(experiments, agreementIds, usersDb) {
           if (agreement.isBroken()){
             revertUrls(experiments[agreement.experimentId], agreement.urls, agreement.server)
             agreedUsersIds.forEach(userId => {
-              user = usersDb.get(userId)
+              const user = usersDb.get(userId)
               user.changeState('queued')
             })
             nonAgreedUsersIds.forEach(userId => {
-              user = usersDb.get(userId)
+              const user = usersDb.get(userId)
               user.reset()
             })
           }
@@ -301,8 +281,7 @@ async function main() {
       }
       // Instantiate a scheduler class and pass the queue to 
       // be managed by the scheduler
-      const scheduler = new (SchedulerPlugins.getClass(e.scheduler.type))(e.name, Queue, e.scheduler.params)
-      experiments[e.name]['scheduler'] = scheduler
+      experiments[e.name]['scheduler'] = new (SchedulerPlugins.getClass(e.scheduler.type))(e.name, Queue, e.scheduler.params)
     })
   } catch(error) {
     console.log(`[ERROR] Failed to load scheduler/s ${error.message}`)
@@ -334,8 +313,7 @@ async function main() {
       FROM otree_participant 
       WHERE code = '${participantCode}'`)
     const result = results.filter(r => {
-      if (r.length == 0) return false
-      return true
+      return r.length !== 0;
     })
     res.status(201).json(result)
   })
@@ -347,8 +325,7 @@ async function main() {
       FROM otree_participant 
       WHERE code = '${participantCode}'`)
     const result = results.filter(r => {
-      if (r.length == 0) return false
-      return true
+      return r.length !== 0;
     })
     res.status(201).json(result)
   })
@@ -395,7 +372,7 @@ async function main() {
     const params = req.user
     const userId = params.userId
     // Check if token parameter matches url
-    if (params.experimentId != req.params.experimentId) {
+    if (params.experimentId !== req.params.experimentId) {
       console.log('[WARN] token experimentId and url do not match!')
       res.status(404).sendFile(__dirname + '/webpage_templates/404.html')
       return
@@ -454,7 +431,7 @@ async function main() {
         return
       }
       user.webSocket = socket
-      if (user.state == "queued") {
+      if (user.state === "queued") {
         console.log(`User ${userId} already queued`)
         return
       }
@@ -539,7 +516,7 @@ async function main() {
       const participantCode = expUrl.pathname.split('/').pop()
       const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
       axios.post(apiUrl, { "vars": oTreeVars}, config)
-        .then(res => {
+        .then(_ => {
           console.log(`Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`)
           const sock = user.webSocket
           // Emit a custom event with the game room URL
@@ -547,7 +524,7 @@ async function main() {
           user.changeState("inoTreePages")
           user.redirectedUrl = expUrl
         })
-        .catch(err => {
+        .catch(_ => {
           console.log(`Error updating ${userId} vars for participant ${participantCode}.`)
         })
     }

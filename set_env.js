@@ -43,7 +43,7 @@ const getContainersInfo = async () => {
     const containers = await docker.container.list();
     const containerInfoPromises = containers.filter(async (container) => {
       const inspectInfo = await container.status()
-      return inspectInfo.data.State.Status == "running"
+      return inspectInfo.data.State.Status === "running"
     }).map(container => {
       const ip = findKeyValue(container.data.NetworkSettings, "IPAddress")
       return {
