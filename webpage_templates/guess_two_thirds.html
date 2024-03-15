@@ -85,7 +85,7 @@
           <div class="w3-center">
 
             <p>Welkom in de wachtkamer!</p>
-            <p>We wachten nog op <span id="playersToWaitFor"></span> spelers. Zosnel er in total <span id="maxPlayers"></span> speler/s zijn zal het spel starten.</p>
+            <p>We wachten nog op <span id="playersToWaitFor"></span> speler(s). Zodra er in totaal <span id="maxPlayers"></span> speler(s) zijn en er een kamer beschikbaar is, zal het spel starten.</p>
 
           </div>
         </div>
@@ -170,7 +170,7 @@
       })
     })
 
-    // Server instrcuts us to wait for more players.
+    // Server instructs us to wait for more players.
     // Server passes the number of players we are waiting for.
     socket.on('wait', (data) => {
       console.log('[SOCKET][wait] ', data)

@@ -21,7 +21,7 @@ function clone(o) {
   return JSON.parse(JSON.stringify(o))
 }
 
-const users = ['user001', 'user002', 'user003', 'user004', 'user005']
+const users = ['user001', 'user002', 'user003', 'user004', 'user005', 'user006']
 
 const userTokens = users.map(u => {
   const userData = clone(userTemplate)
