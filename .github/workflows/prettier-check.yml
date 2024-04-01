@@ -1,11 +1,12 @@
-name: "Run Node.js unit tests"
+name: "Run Prettier check"
 on: [pull_request, workflow_dispatch]
 jobs:
-  run-unit-tests:
+  run-prettier-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npm run test
+      - run: npm install --save-exact prettier
+      - run: npx prettier --check .
