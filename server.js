@@ -26,7 +26,7 @@ const apiKey = process.env.API_KEY
 const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = 8060
-const publicKey = fs.readFileSync("./public-key.pem", "utf8")
+//const publicKey = fs.readFileSync("./public-key.pem", "utf8")
 /**
  *
  * @type {Set<string>}
@@ -160,20 +160,20 @@ const validateHmac = (req, res, next) => {
 }
 
 // Middleware to validate JWT
-const validateToken = (req, res, next) => {
-  const token = req.query.token
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized: Missing token" })
-  }
-  jwt.verify(token, publicKey, { algorithm: ["RS256"] }, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ message: "Unauthorized: Invalid token" })
-    }
-
-    req.user = decoded // Attach user information to the request object
-    next()
-  })
-}
+// const validateToken = (req, res, next) => {
+//   const token = req.query.token
+//   if (!token) {
+//     return res.status(401).json({ message: "Unauthorized: Missing token" })
+//   }
+//   jwt.verify(token, publicKey, { algorithm: ["RS256"] }, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).json({ message: "Unauthorized: Invalid token" })
+//     }
+//
+//     req.user = decoded // Attach user information to the request object
+//     next()
+//   })
+// }
 
 async function getExperimentUrls(experiments) {
   const expToEnable = config.experiments.map((e) => e.name)
