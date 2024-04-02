@@ -316,10 +316,16 @@ async function main() {
     process.exit(1)
   }
 
-  setInterval(async () => {
+  // Maybe only check for every new user queued instead on interval. 
+  // setInterval(async () => {
+  //   await getExperimentUrls(experiments)
+  //   startReadyGames(experiments, agreementIds, usersDb)
+  // }, 1000)
+
+  async function getUrlsAndStartGames(experiments, agreementIds, usersDb){
     await getExperimentUrls(experiments)
     startReadyGames(experiments, agreementIds, usersDb)
-  }, 2000)
+  }
 
   console.log(`Experiments setup:\n${JSON.stringify(experiments, null, 2)}`)
 
@@ -503,7 +509,6 @@ async function main() {
         }
         const scheduler = experiment.scheduler
         scheduler.queueUser(user)
-        //startReadyGames(experiments, agreementIds, usersDb)
         // Condition object returns
         // {
         //  condition: true|false
@@ -519,6 +524,7 @@ async function main() {
         scheduler.signalUsers()
       }) //addListenerForState
       user.changeState("queued")
+      getUrlsAndStartGames(experiments, agreementIds, usersDb)
     }) //newUser
 
     // User sends agreement to start game
