@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "node --test",
-    "dev": "node encode-token.js && node server.js"
+    "dev": "node encode-url.js && node server.js"
   },
   "author": "",
   "license": "ISC",

@@ -23,6 +23,7 @@ require("dotenv").config()
 const otreeIPs = process.env.OTREE_IPS.split(",")
 const otreeRestKey = process.env.OTREE_REST_KEY
 const apiKey = process.env.API_KEY
+const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = 8060
 const publicKey = fs.readFileSync("./public-key.pem", "utf8")
@@ -105,6 +106,8 @@ function revertUrls(exp, urls, serverKey) {
 function lastElement(arr) {
   return arr[arr.length - 1]
 }
+
+
 // Middleware to validate signature
 const validateSignature = (req, res, next) => {
   const xSignature = req.headers["x-signature"]
@@ -118,6 +121,38 @@ const validateSignature = (req, res, next) => {
     calculatedSignatureWordArray,
   )
   if (calculatedSignatureBase64 === xSignature) {
+    next()
+  } else {
+    res.status(401).json({ message: "Unauthorized: Invalid signature" })
+  }
+}
+
+// Middleware to validate signature
+const validateHmac = (req, res, next) => {
+  function getYmdDate() {
+    const now = new Date()
+    let month = ("0" + (now.getMonth() + 1)).slice(-2);
+    let day = ("0" + now.getDate()).slice(-2);
+    return `${now.getFullYear()}${month}${day}`
+  }
+  const today = getYmdDate()
+
+  const respondent = req.query.respondent
+  const check = req.query.check
+
+  const dataToSign = `${respondent}${today}`
+  console.log(dataToSign)
+  console.log(secretKey)
+  const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+  const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
+  console.log(signatureHex)
+  console.log(check)
+
+  if (signatureHex === check) {
+    req.user = {
+      userId: respondent,
+      oTreeVars: {}
+    }
     next()
   } else {
     res.status(401).json({ message: "Unauthorized: Invalid signature" })
@@ -431,15 +466,15 @@ async function main() {
     res.status(201).json(experiments)
   })
 
-  app.get("/room/:experimentId", validateToken, async (req, res) => {
+  app.get("/room/:experimentId", validateHmac, async (req, res) => {
     const params = req.user
     const userId = params.userId
     // Check if token parameter matches url
-    if (params.experimentId !== req.params.experimentId) {
-      console.log("[WARN] token experimentId and url do not match!")
-      res.status(404).sendFile(__dirname + "/webpage_templates/404.html")
-      return
-    }
+    // if (params.experimentId !== req.params.experimentId) {
+    //   console.log("[WARN] token experimentId and url do not match!")
+    //   res.status(404).sendFile(__dirname + "/webpage_templates/404.html")
+    //   return
+    // }
 
     // Check if experiment exists
     params.experimentId = req.params.experimentId
