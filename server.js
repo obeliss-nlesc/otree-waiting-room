@@ -66,7 +66,7 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
               results.push({
                 server: s,
                 experimentName: experimentName,
-                experimentUrl: experimentUrl
+                experimentUrl: experimentUrl,
               })
             })
           })
@@ -195,7 +195,9 @@ function startReadyGames(experiments, agreementIds, usersDb) {
     const experiment = experiments[experimentId]
     const scheduler = experiment.scheduler
     if (!scheduler) {
-      console.error(`[ERROR] No scheduler set for experiment ${experimentId}. Check config.json.`)
+      console.error(
+        `[ERROR] No scheduler set for experiment ${experimentId}. Check config.json.`,
+      )
       continue
     }
 
@@ -316,16 +318,16 @@ async function main() {
     process.exit(1)
   }
 
-  // Maybe only check for every new user queued instead on interval. 
+  // Maybe only check for every new user queued instead on interval.
   // setInterval(async () => {
   //   await getExperimentUrls(experiments)
   //   startReadyGames(experiments, agreementIds, usersDb)
   // }, 1000)
 
   let lastUpdate = new Date()
-  async function getUrlsAndStartGames(experiments, agreementIds, usersDb){
+  async function getUrlsAndStartGames(experiments, agreementIds, usersDb) {
     const now = new Date()
-    const tDiff = Math.abs( (now.getTime() - lastUpdate.getTime()) /  1000 )
+    const tDiff = Math.abs((now.getTime() - lastUpdate.getTime()) / 1000)
     if (tDiff > 30) {
       lastUpdate = now
       console.log(`Updating URLs. Last update was ${tDiff} seconds ago.`)

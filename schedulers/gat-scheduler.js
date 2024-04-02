@@ -36,12 +36,12 @@ class GatScheduler {
     const playersToWaitFor = this.playersToWaitFor()
     this.queue.getQueue().forEach((user) => {
       if (!user) {
-        console.error(`User ${userId} not found!`)
+        console.error(`User ${user.userId} not found!`)
         return
       }
       const sock = user.webSocket
       if (!sock) {
-        console.error(`Socket for ${userId} not found!`)
+        console.error(`Socket for ${user.userId} not found!`)
         return
       }
       sock.emit("queueUpdate", {
