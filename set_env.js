@@ -8,17 +8,19 @@ const postgresUser = "otree_user"
 const postgresPass = "password"
 const postgresDb = "django_db"
 const otreeRestKey = "password"
-const apiKey = getApiKeyFromFile("./api.key") || generateApiKey()
+const apiKey = getKeyFromFile("./api.key") || generateApiKey()
+const secretKey = getKeyFromFile("./secret.key") || generateApiKey()
 
 function generateApiKey() {
   return crypto.randomBytes(16).toString("hex")
 }
 
-function getApiKeyFromFile(path) {
+function getKeyFromFile(path) {
   if (!fs.existsSync(path)) {
     return
   }
-  return fs.readFileSync(path)
+  let k = fs.readFileSync(path).toString()
+  return k.trim()
 }
 
 function findKeyValue(obj, keyToFind) {
@@ -86,7 +88,8 @@ getContainersInfo()
     console.log(`POSTGRES_DB=${postgresDb}`)
     console.log(`POSTGRES_PASSWORD=${postgresPass}`)
     console.log(`OTREE_REST_KEY=${otreeRestKey}`)
-    console.log(`API_KEY=${apiKey}`)
+    console.log(`SECRET_KEY="${secretKey}"`)
+    console.log(`API_KEY="${apiKey}"`)
   })
   .catch((error) => {
     console.error("Error:", error)
