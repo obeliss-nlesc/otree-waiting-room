@@ -51,6 +51,7 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
     // then we can wait on all promises to resolve with Promise.all
     const outerPromises = otreeIPs.map((s) => {
       const apiUrl = `http://${s}/api/sessions`
+      //console.log(`Calling ${apiUrl}`)
       return axios.get(apiUrl, config).then(async (res) => {
         // For every session on the server we call back to the server
         // to get more participant info. We do the same with promises
@@ -61,10 +62,11 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
           const sessionUrl = apiUrl + "/" + code
           return axios.get(sessionUrl, config).then((res) => {
             res.data.participants.forEach((p) => {
+              const experimentUrl = `http://${s}/InitializeParticipant/${p.code}`
               results.push({
                 server: s,
                 experimentName: experimentName,
-                experimentUrl: `http://${s}/InitializeParticipant/${p.code}`,
+                experimentUrl: experimentUrl,
               })
             })
           })
@@ -160,6 +162,7 @@ async function getExperimentUrls(experiments) {
         servers: {},
       })
       const expUrls = getOrSetValue(exp.servers, r.server, [])
+      //console.log(`expUrls ${expUrls} oTreeUrls: ${r.experimentUrl}`)
       if (expUrls.includes(r.experimentUrl) || usedUrls.has(r.experimentUrl)) {
         return
       }
@@ -191,6 +194,12 @@ function startReadyGames(experiments, agreementIds, usersDb) {
   for (const [experimentId, _] of Object.entries(experiments)) {
     const experiment = experiments[experimentId]
     const scheduler = experiment.scheduler
+    if (!scheduler) {
+      console.error(
+        `[ERROR] No scheduler set for experiment ${experimentId}. Check config.json.`,
+      )
+      continue
+    }
 
     let canMaybeScheduleNext = true
     while (canMaybeScheduleNext) {
@@ -201,6 +210,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
       )
       // Check if there are enough users to start the game
       if (conditionObject.condition) {
+        //console.log(conditionObject)
         canMaybeScheduleNext = true
         console.log("Enough users; waiting for agreement.")
         // Generate an agreement object which
@@ -308,10 +318,24 @@ async function main() {
     process.exit(1)
   }
 
-  setInterval(async () => {
-    await getExperimentUrls(experiments)
+  // Maybe only check for every new user queued instead on interval.
+  // setInterval(async () => {
+  //   await getExperimentUrls(experiments)
+  //   startReadyGames(experiments, agreementIds, usersDb)
+  // }, 1000)
+
+  let lastUpdate = new Date()
+  async function getUrlsAndStartGames(experiments, agreementIds, usersDb) {
+    const now = new Date()
+    const tDiff = Math.abs((now.getTime() - lastUpdate.getTime()) / 1000)
+    if (tDiff > 30) {
+      lastUpdate = now
+      console.log(`Updating URLs. Last update was ${tDiff} seconds ago.`)
+      await getExperimentUrls(experiments)
+    }
+
     startReadyGames(experiments, agreementIds, usersDb)
-  }, 1000)
+  }
 
   console.log(`Experiments setup:\n${JSON.stringify(experiments, null, 2)}`)
 
@@ -510,6 +534,7 @@ async function main() {
         scheduler.signalUsers()
       }) //addListenerForState
       user.changeState("queued")
+      getUrlsAndStartGames(experiments, agreementIds, usersDb)
     }) //newUser
 
     // User sends agreement to start game
