@@ -322,8 +322,16 @@ async function main() {
   //   startReadyGames(experiments, agreementIds, usersDb)
   // }, 1000)
 
+  let lastUpdate = new Date()
   async function getUrlsAndStartGames(experiments, agreementIds, usersDb){
-    await getExperimentUrls(experiments)
+    const now = new Date()
+    const tDiff = Math.abs( (now.getTime() - lastUpdate.getTime()) /  1000 )
+    if (tDiff > 30) {
+      lastUpdate = now
+      console.log(`Updating URLs. Last update was ${tDiff} seconds ago.`)
+      await getExperimentUrls(experiments)
+    }
+
     startReadyGames(experiments, agreementIds, usersDb)
   }
 
