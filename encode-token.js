@@ -3,10 +3,11 @@ const fs = require("fs")
 const privateKeyPath = "./private-key.pem"
 const privateKey = fs.readFileSync(privateKeyPath, "utf8")
 
+const expId = "public_goods_game"
 // Replace these values with your actual data and private key file path
 const userTemplate = {
   userId: "",
-  experimentId: "guess_two_thirds",
+  experimentId: expId,
   headerText:
     "In het gevangen dillema spel speelt u samen met 1 ander panellid. U wordt steeds gevraagd om een keuze te maken tussen samenwerken of tegenwerken. In totaal speelt u 10 rondes. Tijdens deze rondes veranderen er soms dingen, dit krijgt u steeds aan het begin van de ronde te zien.",
   meedoenValue: "€0,25",
@@ -29,11 +30,11 @@ const userTokens = users.map((u) => {
   userData.userId = u
   return jwt.sign(userData, privateKey, {
     algorithm: "RS256",
-    expiresIn: "24h",
+    expiresIn: "72h",
   })
 })
 
 userTokens.forEach((t) => {
-  console.log(`http://localhost:8060/room/guess_two_thirds?token=${t}`)
+  console.log(`http://localhost:8060/room/${expId}?token=${t}`)
   console.log()
 })

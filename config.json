@@ -8,6 +8,15 @@
           "min": "3"
         }
       }
+    },
+    {
+      "name": "public_goods_game",
+      "scheduler": {
+        "type": "GatScheduler",
+        "params": {
+          "min": "3"
+        }
+      }
     }
   ]
 }
