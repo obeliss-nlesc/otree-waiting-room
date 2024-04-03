@@ -33,7 +33,6 @@ const port = process.argv[2] || "8060"
  */
 const usedUrls = new Set()
 
-
 function getOrSetValue(obj, key, defaultValue) {
   if (!(key in obj)) {
     obj[key] = defaultValue
