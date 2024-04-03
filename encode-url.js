@@ -16,7 +16,7 @@ function getYmdDate() {
 }
 const now = getYmdDate()
 hosts.forEach((host) => {
-  experimentIds.forEach(experimentId => {
+  experimentIds.forEach((experimentId) => {
     console.log(`URLS for experiment: ${experimentId}`)
     users.forEach((u) => {
       const dataToSign = `${u}:${now}:${experimentId.toLowerCase()}`

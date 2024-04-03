@@ -631,7 +631,9 @@ async function main() {
           user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
           sock.emit("gameStart", { room: user.redirectedUrl })
           user.changeState("inoTreePages")
-          console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
+          console.log(
+            `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
+          )
         })
         .catch((_) => {
           console.log(
