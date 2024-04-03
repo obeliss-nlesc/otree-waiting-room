@@ -216,7 +216,8 @@
       // Handle redirect to game
       socket.on("gameStart", (data) => {
         console.log("Redirecting to game:", data.room)
-        window.location.href = data.room // Redirect to the game URL
+        window.top.location.href = data.room
+        //window.location.href = data.room // Redirect to the game URL
       })
     </script>
   </body>

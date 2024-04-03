@@ -25,7 +25,7 @@ const otreeRestKey = process.env.OTREE_REST_KEY
 const apiKey = process.env.API_KEY
 const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
-const port = 8060
+const port = process.argv[2] || "8060"
 //const publicKey = fs.readFileSync("./public-key.pem", "utf8")
 /**
  *
