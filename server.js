@@ -107,7 +107,6 @@ function lastElement(arr) {
   return arr[arr.length - 1]
 }
 
-
 // Middleware to validate signature
 const validateSignature = (req, res, next) => {
   const xSignature = req.headers["x-signature"]
@@ -131,8 +130,8 @@ const validateSignature = (req, res, next) => {
 const validateHmac = (req, res, next) => {
   function getYmdDate() {
     const now = new Date()
-    let month = ("0" + (now.getMonth() + 1)).slice(-2);
-    let day = ("0" + now.getDate()).slice(-2);
+    let month = ("0" + (now.getMonth() + 1)).slice(-2)
+    let day = ("0" + now.getDate()).slice(-2)
     return `${now.getFullYear()}${month}${day}`
   }
   const today = getYmdDate()
@@ -151,7 +150,7 @@ const validateHmac = (req, res, next) => {
   if (signatureHex === check) {
     req.user = {
       userId: respondent,
-      oTreeVars: {}
+      oTreeVars: {},
     }
     next()
   } else {
