@@ -7,7 +7,7 @@ class Agreement {
     this.urls = urls
     this.server = server
     this.state = "new"
-    this.timeout = 10
+    this.timeout = 30
   }
 
   startTimeout(fn) {
