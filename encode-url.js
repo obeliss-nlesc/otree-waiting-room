@@ -19,7 +19,7 @@ hosts.forEach((host) => {
   experimentIds.forEach((experimentId) => {
     console.log(`URLS for experiment: ${experimentId}`)
     users.forEach((u) => {
-      const dataToSign = `${u}:${now}:${experimentId.toLowerCase()}`
+      const dataToSign = `${u}:${now}:${experimentId}`
       const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
       const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
       console.log(
