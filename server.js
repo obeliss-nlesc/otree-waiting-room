@@ -628,9 +628,10 @@ async function main() {
           )
           const sock = user.webSocket
           // Emit a custom event with the game room URL
-          sock.emit("gameStart", { room: expUrl.toString() })
+          user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+          sock.emit("gameStart", { room: user.redirectedUrl })
           user.changeState("inoTreePages")
-          user.redirectedUrl = expUrl
+          console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
         })
         .catch((_) => {
           console.log(
