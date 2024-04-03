@@ -138,15 +138,11 @@ const validateHmac = (req, res, next) => {
 
   const respondent = req.query.respondent
   const check = req.query.check
-  const experimentId = req.params.experimentId
+  const experimentId = req.params.experimentId || ''
 
-  const dataToSign = `${respondent}:${today}:${experimentId}`
-  console.log(dataToSign)
-  console.log(secretKey)
+  const dataToSign = `${respondent}:${today}:${experimentId.toLowerCase()}`
   const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
   const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
-  console.log(signatureHex)
-  console.log(check)
 
   if (signatureHex === check) {
     req.user = {
