@@ -3,6 +3,7 @@ require("dotenv").config()
 const secretKey = process.env.SECRET_KEY
 const experimentId = "public_goods_game"
 const users = [212035, 212036, 212037, 212038, 212039, 212040]
+const host = "localhost:8060"
 if (!secretKey) {
   console.log("[ERROR] no secret key")
   return
@@ -15,10 +16,10 @@ function getYmdDate() {
 }
 const now = getYmdDate()
 users.forEach((u) => {
-  const dataToSign = `${u}${now}`
+  const dataToSign = `${u}:${now}:${experimentId.toLowerCase()}`
   const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
   const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
   console.log(
-    `http://localhost:8060/room/${experimentId}?respondent=${u}&check=${signatureHex}`,
+    `http://${host}/room/${experimentId}?respondent=${u}&check=${signatureHex}`,
   )
 })
