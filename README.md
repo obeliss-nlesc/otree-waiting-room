@@ -4,10 +4,20 @@
 
 Run multiple otree servers using docker compose. follow [setup](https://github.com/obeliss-nlesc/otree-docker).
 
+## Download sources
+Pull master from github
+```shell
+git clone https://github.com/obeliss-nlesc/otree-waiting-room.git
+```
+
 ## Install dependencies
 
-To install package dependencies
+The server runs on node version 20 or greater. Check your node version:
+```shell
+node -v
+```
 
+To install package dependencies
 ```shell
 npm install
 ```
@@ -22,18 +32,17 @@ node set_env.js > .env
 
 to set the .env file. The script will scan the local docker images to get the IPs of the containers.
 
-## Generate public and private keys
-
-To generate keys for token encoding and verification, first generate the private key
+In other cases the .env file needs to be setup manually as an example like so:
 
 ```shell
-openssl genpkey -algorithm RSA -out private-key.pem
-```
-
-then generate the public key
-
-```shell
-openssl rsa -pubout -in private-key.pem -out public-key.pem
+POSTGRES_IPS=192.168.0.1,192.168.0.2,192.168.0.3
+OTREE_IPS=192.168.0.1,192.168.0.2,192.168.0.3
+POSTGRES_USER=otree_user
+POSTGRES_DB=django_db
+POSTGRES_PASSWORD=somepassword
+OTREE_REST_KEY=somepassword
+SECRET_KEY="some secret in quotes"
+API_KEY="some other secret in quotes"
 ```
 
 ## Start waiting room
@@ -45,6 +54,17 @@ npm run dev
 ```
 
 Three test user URLs are printed on the command line that can be used to test the server.
+
+## Starting the server using PM2
+
+To manage the server with pm2, first install pm2
+
+```shell
+npm install pm2 -g
+pm2 start server.js -- 8080
+pm2 list
+```
+
 
 ## API documentation
 
