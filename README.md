@@ -37,8 +37,8 @@ In other cases the .env file needs to be setup manually as an example like so:
 ```shell
 POSTGRES_IPS=192.168.0.1,192.168.0.2,192.168.0.3
 OTREE_IPS=192.168.0.1,192.168.0.2,192.168.0.3
-POSTGRES_USER=otree_user
-POSTGRES_DB=django_db
+POSTGRES_USER=some_user
+POSTGRES_DB=some_db
 POSTGRES_PASSWORD=somepassword
 OTREE_REST_KEY=somepassword
 SECRET_KEY="some secret in quotes"
