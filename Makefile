@@ -4,12 +4,18 @@
 build:
 	docker build -t obeliss/waiting-room .
 
-run: build
-	docker ps -q --filter name="otree-waiting-room" | xargs -r docker stop
-	docker run -p 8080:80 --name otree-waiting-room --rm obeliss/waiting-room
+up: down build start
+
+start: 
+	docker run -p 8080:80 -d --name otree-waiting-room --rm obeliss/waiting-room
+
+restart: down up
 
 shell:
 	docker exec -it otree-waiting-room /bin/bash
 
-stop:
-	docker stop otree-waiting-room
+log:
+	docker logs -f otree-waiting-room
+
+down:
+	docker ps -q --filter name="otree-waiting-room" | xargs -r docker stop

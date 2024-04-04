@@ -3,6 +3,9 @@
 *.pem
 api.key
 
+# Data folder
+data/*
+
 # Logs
 logs
 *.log

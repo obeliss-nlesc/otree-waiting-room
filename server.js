@@ -27,6 +27,11 @@ const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = process.argv[2] || "8060"
 //const publicKey = fs.readFileSync("./public-key.pem", "utf8")
+//
+process.on("SIGINT", function () {
+  console.log("\nGracefully shutting down from SIGINT (Ctrl-C)")
+  process.exit(0)
+})
 /**
  *
  * @type {Set<string>}
