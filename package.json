@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "node --test",
-    "dev": "node encode-url.js && node server.js"
+    "dev": "node encode-url.js && node server.js 8060",
+    "start": "node server.js 80"
   },
   "author": "",
   "license": "ISC",
