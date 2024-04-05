@@ -286,6 +286,20 @@ function startReadyGames(experiments, agreementIds, usersDb) {
             }
           },
         )
+      } else {
+        // Check if we have places on a server,
+        // if no servers avaialble send users back to start screen
+        // and empty experiment queue.
+        if (
+          conditionObject.waitForCount === 0 &&
+          conditionObject.server === null
+        ) {
+          console.warn(`[WARNING] experiment ${experimentId} ran out of slots!`)
+          scheduler.resetQueue()
+          conditionObject.users.forEach((user) => {
+            user.reset()
+          })
+        }
       }
     }
   }

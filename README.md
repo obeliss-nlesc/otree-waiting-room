@@ -5,7 +5,9 @@
 Run multiple otree servers using docker compose. follow [setup](https://github.com/obeliss-nlesc/otree-docker).
 
 ## Download sources
+
 Pull master from github
+
 ```shell
 git clone https://github.com/obeliss-nlesc/otree-waiting-room.git
 ```
@@ -13,11 +15,13 @@ git clone https://github.com/obeliss-nlesc/otree-waiting-room.git
 ## Install dependencies
 
 The server runs on node version 20 or greater. Check your node version:
+
 ```shell
 node -v
 ```
 
 To install package dependencies
+
 ```shell
 npm install
 ```
@@ -64,7 +68,6 @@ npm install pm2 -g
 pm2 start server.js -- 8080
 pm2 list
 ```
-
 
 ## API documentation
 
