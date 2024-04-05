@@ -2,6 +2,7 @@
 .env
 *.pem
 api.key
+*.key
 
 # Data folder
 data/*
