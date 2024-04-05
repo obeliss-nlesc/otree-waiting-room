@@ -8,6 +8,20 @@ class User {
     this.state = "new"
     this.listeners = []
     this.webSocket = null
+    this.timestamp = new Date().toISOString()
+    
+  }
+
+  serialize() {
+    return {
+      userId: this.userId,
+      experimentId: this.experimentId,
+      redirectedUrl: this.redirectedUrl,
+      state: this.state,
+      oTreeId: this.oTreeId,
+      tokenParams: this.tokenParams,
+      timestamp: this.timestamp
+    }
   }
 
   // DFA transition table
@@ -26,6 +40,7 @@ class User {
 
   reset() {
     this.state = "startedPage"
+    this.timestamp = new Date().toISOString()
     this.listeners = []
     this.redirectedUrl = null
     this.oTreeId = null
@@ -67,6 +82,7 @@ class User {
     ) {
       // Valid transition
       this.state = action
+      this.timestamp = new Date().toISOString()
       console.log(`${this.userId}'s state has been changed to ${this.state}`)
       this.notifyListeners(this.state) // Notify listeners about the state change
     } else {

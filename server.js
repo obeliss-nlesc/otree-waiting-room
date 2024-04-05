@@ -18,6 +18,8 @@ const Agreement = require("./agreement.js")
 // const classLoader = require('./class_loader.js')
 const ClassLoader = require("./class_loader.js")
 const config = require("./config.json")
+const { userInfo } = require("os")
+const UserDb = require("./UserDb.js")
 
 require("dotenv").config()
 const otreeIPs = process.env.OTREE_IPS.split(",")
@@ -26,6 +28,7 @@ const apiKey = process.env.API_KEY
 const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 const port = process.argv[2] || "8060"
+const userDbFile = "./data/userdb.json"
 //const publicKey = fs.readFileSync("./public-key.pem", "utf8")
 //
 process.on("SIGINT", function () {
@@ -311,7 +314,9 @@ async function main() {
    *
    * @type {Map<string, User>}
    */
-  const usersDb = new Map()
+  //const usersDb = new Map()
+  const usersDb = new UserDb(userDbFile)
+  await usersDb.load()
   const userMapping = {}
   const agreementIds = {}
   const expToEnable = config.experiments.map((e) => e.name)
@@ -638,28 +643,42 @@ async function main() {
         },
       }
       const participantCode = expUrl.pathname.split("/").pop()
-      const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
-      axios
-        .post(apiUrl, { vars: oTreeVars }, config)
-        .then((_) => {
-          console.log(
-            `Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`,
-          )
-          const sock = user.webSocket
-          // Emit a custom event with the game room URL
-          user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-          sock.emit("gameStart", { room: user.redirectedUrl })
-          user.changeState("inoTreePages")
-          console.log(
-            `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
-          )
-        })
-        .catch((_) => {
-          console.log(
-            `Error updating ${userId} vars for participant ${participantCode}.`,
-          )
-        })
+      const sock = user.webSocket
+      // Emit a custom event with the game room URL
+      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+      sock.emit("gameStart", { room: user.redirectedUrl })
+      user.changeState("inoTreePages")
+      console.log(
+        `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
+      )
+
+      //We do not need to update vars on oTree anymore since they are not comming
+      //through the url encoding
+      //
+      // const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
+      // axios
+      //   .post(apiUrl, { vars: oTreeVars }, config)
+      //   .then((_) => {
+      //     console.log(
+      //       `Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`,
+      //     )
+      //     const sock = user.webSocket
+      //     // Emit a custom event with the game room URL
+      //     user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+      //     sock.emit("gameStart", { room: user.redirectedUrl })
+      //     user.changeState("inoTreePages")
+      //     console.log(
+      //       `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
+      //     )
+      //   })
+      //   .catch((_) => {
+      //     console.log(
+      //       `Error updating ${userId} vars for participant ${participantCode}.`,
+      //     )
+      //   })
     }
+    // Save users to file with the new redirected urls
+    usersDb.save()
   }
 
   // Start the server
