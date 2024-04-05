@@ -10,6 +10,10 @@ class RedisQueue {
     this.queueName = queueName
   }
 
+  async reset() {
+    await this.redis.del(this.queueName)
+  }
+
   async push(item) {
     const exists = await this.redis.lpos(this.queueName, item)
     if (exists === null) {

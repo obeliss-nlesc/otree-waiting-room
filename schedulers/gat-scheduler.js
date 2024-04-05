@@ -24,6 +24,11 @@ class GatScheduler {
     this.queue.push(user)
   }
 
+  resetQueue() {
+    // Empties the Queue
+    this.queue.reset()
+  }
+
   playersToWaitFor() {
     return Math.max(0, this.min - this.queue.size())
   }
@@ -49,6 +54,14 @@ class GatScheduler {
         maxPlayers: this.min,
       })
     })
+  }
+
+  hasAvailableSlot(experiments) {
+    const experiment = experiments[this.experimentName]
+    if (!experiment) {
+      return false
+    }
+    return Object.values(experiment.servers).some((s) => s.length >= this.min)
   }
 
   checkConditionAndReturnUsers(experiments, usedUrls) {

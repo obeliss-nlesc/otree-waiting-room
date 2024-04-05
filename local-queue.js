@@ -12,6 +12,10 @@ class LocalQueue {
     }
   }
 
+  reset() {
+    this.queue.length = 0
+  }
+
   pushAndGetQueue(item) {
     this.push(item)
     return this.queue
