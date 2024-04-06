@@ -21,7 +21,8 @@ class UserDb extends Map {
         user.oTreeId = u.oTreeId
         user.tokenParams = u.tokenParams
         user.state = (u.redirectedUrl) ? u.state : user.state
-        this.set(user.userId, user)
+        const compoundKey = `${user.userId}:${user.experimentId}`
+        this.set(compoundKey, user)
       })
     }).catch((err) => {
       console.error(`[WARNING] UserDb file ${this.file} file not found will be recreated!`)
@@ -35,6 +36,7 @@ class UserDb extends Map {
 
     const dump = JSON.stringify(data)
     const h = murmurhash(dump, this.seed)
+    console.log(`${h}:${this.lastHash}:${dump}`)
     if (this.lastHash !== h) {
       fs.writeFile(this.file, dump).then(() => {
         this.lastHash = h

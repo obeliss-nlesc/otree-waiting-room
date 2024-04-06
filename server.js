@@ -218,8 +218,8 @@ async function getExperimentUrls(experiments) {
 // starting the game.
 function agreeGame(users, uuid, agreement, usersDb) {
   for (let i = 0; i < users.length; i++) {
-    const userId = users[i]
-    const user = usersDb.get(userId)
+    const compoundKey = users[i]
+    const user = usersDb.get(compoundKey)
     const sock = user.webSocket
     if (!sock) {
       console.error(`User ${userId} has not socket!`)
@@ -256,7 +256,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
         // waits for all users to 'agree' and
         // proceed to the game together
         const uuid = crypto.randomUUID()
-        const gameUsersIds = conditionObject.users.map((u) => u.userId)
+        const gameUsersIds = conditionObject.users.map((u) => `${u.userId}:${u.experimentId}`)
         const agreement = new Agreement(
           uuid,
           experimentId,
@@ -279,11 +279,13 @@ function startReadyGames(experiments, agreementIds, usersDb) {
                 agreement.server,
               )
               agreedUsersIds.forEach((userId) => {
-                const user = usersDb.get(userId)
+                const compoundKey = `${userId}:${agreement.experimentId}`
+                const user = usersDb.get(compoundKey)
                 user.changeState("queued")
               })
               nonAgreedUsersIds.forEach((userId) => {
-                const user = usersDb.get(userId)
+                const compoundKey = `${userId}:${agreement.experimentId}`
+                const user = usersDb.get(compoundKey)
                 user.reset()
               })
             }
@@ -504,9 +506,10 @@ async function main() {
       res.status(404).sendFile(__dirname + "/webpage_templates/404.html")
       return
     }
-    const user = usersDb.get(userId) || new User(userId, params.experimentId)
+    const compoundKey = `${userId}:${params.experimentId}`
+    const user = usersDb.get(compoundKey) || new User(userId, params.experimentId)
     user.tokenParams = params
-    usersDb.set(userId, user)
+    usersDb.set(compoundKey, user)
     console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (
       fs.existsSync(
@@ -526,7 +529,8 @@ async function main() {
     socket.on("landingPage", async (msg) => {
       const userId = msg.userId
       const experimentId = msg.experimentId
-      const user = usersDb.get(userId) || new User(userId, experimentId)
+      const compoundKey = `${userId}:${experimentId}`
+      const user = usersDb.get(compoundKey) || new User(userId, experimentId)
       user.webSocket = socket
       // If user is queued and refreshes page then re-trigger
       // queued events.
@@ -543,7 +547,7 @@ async function main() {
         default:
           user.changeState("startedPage")
           user.reset()
-          usersDb.set(userId, user)
+          usersDb.set(compoundKey, user)
           console.log(
             `User ${userId} connected for experiment ${experimentId}.`,
           )
@@ -551,7 +555,9 @@ async function main() {
     })
     socket.on("newUser", async (msg) => {
       let userId = msg.userId
-      let user = usersDb.get(userId)
+      const experimentId = msg.experimentId
+      const compoundKey = `${userId}:${experimentId}`
+      let user = usersDb.get(compoundKey)
 
       if (!user) {
         console.error(`No user ${userId} found!`)
@@ -597,17 +603,19 @@ async function main() {
       console.log("[SOCKET][userAgreed] ", data)
       const userId = data.userId
       const uuid = data.uuid
+      const experimentId = data.experimentId
+      const compoundKey = `${userId}:${experimentId}`
 
       const agreement = agreementIds[uuid]
       if (!agreement) {
         console.log(`[ERROR] no agreement ${uuid}`)
         return
       }
-      usersDb.get(userId).changeState("agreed")
+      usersDb.get(compoundKey).changeState("agreed")
       // If everyone agrees, start game
       if (agreement.agree(userId)) {
         console.log("Start Game!")
-        startGame(agreement.agreedUsers, agreement.urls)
+        startGame(agreement.agreedUsers, agreement.urls, agreement.experimentId)
       }
     })
 
@@ -623,11 +631,12 @@ async function main() {
    * @param users {string[]}
    * @param urls {string[]}
    */
-  function startGame(users, urls) {
+  function startGame(users, urls, experimentId) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`)
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
-      const user = usersDb.get(userId)
+      const compoundKey = `${userId}:${experimentId}`
+      const user = usersDb.get(compoundKey)
       user.changeState("redirected")
       const expUrl = new URL(urls[i])
       userMapping[userId] = expUrl
