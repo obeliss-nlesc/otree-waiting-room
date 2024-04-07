@@ -9,7 +9,6 @@ class User {
     this.listeners = []
     this.webSocket = null
     this.timestamp = new Date().toISOString()
-    
   }
 
   serialize() {
@@ -20,7 +19,7 @@ class User {
       state: this.state,
       oTreeId: this.oTreeId,
       tokenParams: this.tokenParams,
-      timestamp: this.timestamp
+      timestamp: this.timestamp,
     }
   }
 

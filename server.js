@@ -256,7 +256,9 @@ function startReadyGames(experiments, agreementIds, usersDb) {
         // waits for all users to 'agree' and
         // proceed to the game together
         const uuid = crypto.randomUUID()
-        const gameUsersIds = conditionObject.users.map((u) => `${u.userId}:${u.experimentId}`)
+        const gameUsersIds = conditionObject.users.map(
+          (u) => `${u.userId}:${u.experimentId}`,
+        )
         const agreement = new Agreement(
           uuid,
           experimentId,
@@ -507,7 +509,8 @@ async function main() {
       return
     }
     const compoundKey = `${userId}:${params.experimentId}`
-    const user = usersDb.get(compoundKey) || new User(userId, params.experimentId)
+    const user =
+      usersDb.get(compoundKey) || new User(userId, params.experimentId)
     user.tokenParams = params
     usersDb.set(compoundKey, user)
     console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
@@ -657,9 +660,7 @@ async function main() {
       user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
       sock.emit("gameStart", { room: user.redirectedUrl })
       user.changeState("inoTreePages")
-      console.log(
-        `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
-      )
+      console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
 
       //We do not need to update vars on oTree anymore since they are not comming
       //through the url encoding
