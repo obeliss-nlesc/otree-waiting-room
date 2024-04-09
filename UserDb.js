@@ -33,6 +33,19 @@ class UserDb extends Map {
         )
       })
   }
+  find(userId) {
+    return Array.from(this.values()).filter((u) => {
+      return u.userId == userId
+    })
+  }
+  dump() {
+    const data = []
+    this.forEach((v, k) => {
+      data.push(v.serialize())
+    })
+
+    return JSON.stringify(data)
+  }
   save() {
     const data = []
     this.forEach((v, k) => {

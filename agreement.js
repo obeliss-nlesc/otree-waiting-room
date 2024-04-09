@@ -1,5 +1,5 @@
 class Agreement {
-  constructor(agreementId, experimentId, users, urls, server) {
+  constructor(agreementId, experimentId, users, urls, server, timeout) {
     this.agreementId = agreementId
     this.experimentId = experimentId
     this.users = users
@@ -7,7 +7,7 @@ class Agreement {
     this.urls = urls
     this.server = server
     this.state = "new"
-    this.timeout = 30
+    this.timeout = timeout || 30
   }
 
   startTimeout(fn) {

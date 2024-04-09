@@ -1,3 +1,4 @@
+const { program } = require("commander")
 const express = require("express")
 const http = require("http")
 const axios = require("axios")
@@ -27,8 +28,20 @@ const otreeRestKey = process.env.OTREE_REST_KEY
 const apiKey = process.env.API_KEY
 const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
-const port = process.argv[2] || "8060"
-const userDbFile = "./data/userdb.json"
+
+program
+  .option("-p, --port <int>", "server listen port")
+  .option("--reset-db", "reset users database")
+  .option("--db-file <type>", "user database file to use")
+
+program.parse(process.argv)
+const options = program.opts()
+console.log(options.port)
+console.log(options.resetDb)
+console.log(options)
+
+const port = options.port || "8060"
+const userDbFile = options.dbFile || "./data/userdb.json"
 //const publicKey = fs.readFileSync("./public-key.pem", "utf8")
 //
 process.on("SIGINT", function () {
@@ -280,13 +293,22 @@ function startReadyGames(experiments, agreementIds, usersDb) {
                 agreement.urls,
                 agreement.server,
               )
-              agreedUsersIds.forEach((userId) => {
-                const compoundKey = `${userId}:${agreement.experimentId}`
+
+              console.log(agreedUsersIds)
+              console.log(nonAgreedUsersIds)
+
+              //agreedUsersIds.forEach((userId) => {
+              agreedUsersIds.forEach((compoundKey) => {
+                // const compoundKey = `${userId}:${agreement.experimentId}`
+                console.log(`agree: ${compoundKey}`)
                 const user = usersDb.get(compoundKey)
                 user.changeState("queued")
               })
-              nonAgreedUsersIds.forEach((userId) => {
-                const compoundKey = `${userId}:${agreement.experimentId}`
+              //nonAgreedUsersIds.forEach((userId) => {
+              nonAgreedUsersIds.forEach((compoundKey) => {
+                // usersDb.dump()
+                // const compoundKey = `${userId}:${agreement.experimentId}`
+                console.log(`Non agree: ${compoundKey}`)
                 const user = usersDb.get(compoundKey)
                 user.reset()
               })
@@ -301,7 +323,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
           conditionObject.waitForCount === 0 &&
           conditionObject.server === null
         ) {
-          console.warn(`[WARNING] experiment ${experimentId} ran out of slots!`)
+          console.warn(`[WARNING] Experiment ${experimentId} ran out of slots!`)
           scheduler.resetQueue()
           conditionObject.users.forEach((user) => {
             user.reset()
@@ -314,14 +336,16 @@ function startReadyGames(experiments, agreementIds, usersDb) {
 
 async function main() {
   const experiments = {}
+  if (options.resetDb && fs.existsSync(userDbFile)) {
+    console.log(`Deleting ${userDbFile} file!`)
+    fs.unlinkSync(userDbFile)
+  }
   /**
    *
-   * @type {Map<string, User>}
+   * @type {Map<`${userId}:${experimentId}`, User>}
    */
-  //const usersDb = new Map()
   const usersDb = new UserDb(userDbFile)
   await usersDb.load()
-  const userMapping = {}
   const agreementIds = {}
   const expToEnable = config.experiments.map((e) => e.name)
   // Load schedulers from directory
@@ -406,21 +430,31 @@ async function main() {
     "/api/lissparticipants/:userId",
     validateSignature,
     async (req, res) => {
-      const participantUrl = userMapping[req.params.userId]
-      if (!participantUrl) {
-        res.status(404).json({ message: `${req.params.userId} not found.` })
-        return
+      function flatten(arr) {
+        return arr.reduce(function (flat, toFlatten) {
+          return flat.concat(
+            Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten,
+          )
+        }, [])
       }
-      const parseUrl = url.parse(participantUrl)
-      //const hostname = parseUrl.hostname
-      const participantCode = lastElement(parseUrl.pathname.split("/"))
-      const results = await db.parQuery(`SELECT *
-      FROM otree_participant 
-      WHERE code = '${participantCode}'`)
-      const result = results.filter((r) => {
-        return r.length !== 0
-      })
-      res.status(201).json(result)
+      const results = usersDb
+        .find(req.params.userId)
+        .map((u) => u.serialize())
+        .filter((u) => u.redirectedUrl)
+        .map(async (u) => {
+          const participantUrl = u.redirectedUrl
+          const parseUrl = url.parse(participantUrl)
+          const participantCode = lastElement(parseUrl.pathname.split("/"))
+          const sqlResults = await db.parQuery(`SELECT *
+          FROM otree_participant 
+          WHERE code = '${participantCode}'`)
+          const nonEmpty = sqlResults.filter((r) => {
+            return r.length !== 0
+          })
+          return nonEmpty
+        })
+      const vals = await Promise.all(results)
+      res.status(201).json(flatten(vals))
     },
   )
 
@@ -616,7 +650,7 @@ async function main() {
       }
       usersDb.get(compoundKey).changeState("agreed")
       // If everyone agrees, start game
-      if (agreement.agree(userId)) {
+      if (agreement.agree(compoundKey)) {
         console.log("Start Game!")
         startGame(agreement.agreedUsers, agreement.urls, agreement.experimentId)
       }
@@ -638,23 +672,23 @@ async function main() {
     console.log(`Starting game with users: ${users} and urls ${urls}.`)
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
-      const compoundKey = `${userId}:${experimentId}`
+      // const compoundKey = `${userId}:${experimentId}`
+      const compoundKey = userId
       const user = usersDb.get(compoundKey)
       user.changeState("redirected")
       const expUrl = new URL(urls[i])
-      userMapping[userId] = expUrl
       // Set user variables on oTree server
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
-      const oTreeVars = user.tokenParams?.oTreeVars || {}
+      // const oTreeVars = user.tokenParams?.oTreeVars || {}
       // First update user variables on oTree server
       // then redirect
-      const config = {
-        headers: {
-          "otree-rest-key": otreeRestKey,
-        },
-      }
-      const participantCode = expUrl.pathname.split("/").pop()
+      // const config = {
+      //   headers: {
+      //     "otree-rest-key": otreeRestKey,
+      //   },
+      // }
+      //const participantCode = expUrl.pathname.split("/").pop()
       const sock = user.webSocket
       // Emit a custom event with the game room URL
       user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
