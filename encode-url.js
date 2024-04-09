@@ -1,9 +1,26 @@
+const { program } = require("commander")
 const CryptoJS = require("crypto-js")
 require("dotenv").config()
 const secretKey = process.env.SECRET_KEY
-const experimentIds = ["public_goods_game", "DropOutTest"]
-const users = [212035, 212036, 212037, 212038, 212039, 212040]
-const hosts = ["lobby.lisspanel.nl", "localhost:8060"]
+const config = require("./config.json")
+program
+  .option("-n, --num-users <int>", "number of users")
+  .option("-h, --host <type>", "host to point to")
+
+program.parse(process.argv)
+const options = program.opts()
+const experimentIds = config.experiments.map((e) => e.name)
+const numUsers = options.numUsers || 3
+let users = [212035, 212036, 212037]
+if (options.numUsers) {
+  users = []
+  for (let i = 0; i < numUsers; i++) {
+    const id = Math.floor(Math.random() * 90000) + 10000
+    users.push(id)
+  }
+}
+const hosts = options.host ? [options.host] : ["localhost:8060"]
+
 if (!secretKey) {
   console.log("[ERROR] no secret key")
   return

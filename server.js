@@ -36,9 +36,6 @@ program
 
 program.parse(process.argv)
 const options = program.opts()
-console.log(options.port)
-console.log(options.resetDb)
-console.log(options)
 
 const port = options.port || "8060"
 const userDbFile = options.dbFile || "./data/userdb.json"
