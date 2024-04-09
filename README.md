@@ -54,10 +54,19 @@ API_KEY="some other secret in quotes"
 To start server on a default port 8060 localhost
 
 ```shell
-npm run dev
+node server.js --port 8080
 ```
 
-Three test user URLs are printed on the command line that can be used to test the server.
+A database is created by default in ./data/userdb.json which will save previous redirected urls. To reset the database
+start the server with --reset-db flag.
+
+## Generate test URLs
+
+USe the encode-url.js helper script to generate test urls.
+
+```shell
+node encode-url.js -n 5 -h localhost:8080
+```
 
 ## Starting the server using PM2
 
@@ -65,7 +74,7 @@ To manage the server with pm2, first install pm2
 
 ```shell
 npm install pm2 -g
-pm2 start server.js -- 8080
+pm2 start server.js -- --port 8080
 pm2 list
 ```
 
