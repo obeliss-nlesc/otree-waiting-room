@@ -17,15 +17,6 @@
           "min": "3"
         }
       }
-    },
-    {
-      "name": "DropOutTest",
-      "scheduler": {
-        "type": "GatScheduler",
-        "params": {
-          "min": "3"
-        }
-      }
     }
   ]
 }

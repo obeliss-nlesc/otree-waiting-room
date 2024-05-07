@@ -7,6 +7,7 @@ const socketIO = require("socket.io")
 const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
+console.log(io)
 const fs = require("fs")
 const jwt = require("jsonwebtoken")
 const CryptoJS = require("crypto-js")
@@ -560,6 +561,7 @@ async function main() {
   })
 
   io.on("connection", (socket) => {
+    console.log('WS: connection')
     socket.on("landingPage", async (msg) => {
       const userId = msg.userId
       const experimentId = msg.experimentId
