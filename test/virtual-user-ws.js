@@ -62,13 +62,16 @@ class VirtualUser {
         userId: this.userId,
         uuid: uuid,
       })
+      this.state = "agreed"
     })
     this.socket.on("gameStart", (data) => {
       console.log(`[${this.userId}] redirected to ${data.room}.`)
+      this.state = "redirected"
     })
     this.socket.on("disconnect", () => {
       console.log(`[${this.userId}] disconnected from ${this.serverUrl}`)
       this.socket = null
+      this.state = "disconnected"
     })
     this.socket.emit("landingPage", {
       experimentId: this.experimentId,

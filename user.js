@@ -5,6 +5,8 @@ class User {
     this.tokenParams = null
     this.oTreeId = null
     this.redirectedUrl = null
+    this.experimentUrl = null
+    this.groupId = null
     this.state = "new"
     this.listeners = []
     this.webSocket = null
@@ -16,6 +18,8 @@ class User {
       userId: this.userId,
       experimentId: this.experimentId,
       redirectedUrl: this.redirectedUrl,
+      groupId: this.groupId,
+      experimentUrl: this.experimentUrl,
       state: this.state,
       oTreeId: this.oTreeId,
       tokenParams: this.tokenParams,

@@ -7,7 +7,6 @@ const socketIO = require("socket.io")
 const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
-console.log(io)
 const fs = require("fs")
 const jwt = require("jsonwebtoken")
 const CryptoJS = require("crypto-js")
@@ -51,6 +50,15 @@ process.on("SIGINT", function () {
  * @type {Set<string>}
  */
 const usedUrls = new Set()
+if (options.resetDb && fs.existsSync(userDbFile)) {
+  console.log(`Deleting ${userDbFile} file!`)
+  fs.unlinkSync(userDbFile)
+}
+/**
+ *
+ * @type {Map<`${userId}:${experimentId}`, User>}
+ */
+const usersDb = new UserDb(userDbFile)
 
 function getOrSetValue(obj, key, defaultValue) {
   if (!(key in obj)) {
@@ -192,6 +200,7 @@ const validateHmac = (req, res, next) => {
 
 async function getExperimentUrls(experiments) {
   const expToEnable = config.experiments.map((e) => e.name)
+  const usedUrlsFromDb = usersDb.getUsedUrls()
 
   // clear existing URLs first:
   for (const [_, val] of Object.entries(experiments)) {
@@ -213,7 +222,7 @@ async function getExperimentUrls(experiments) {
       })
       const expUrls = getOrSetValue(exp.servers, r.server, [])
       //console.log(`expUrls ${expUrls} oTreeUrls: ${r.experimentUrl}`)
-      if (expUrls.includes(r.experimentUrl) || usedUrls.has(r.experimentUrl)) {
+      if (expUrls.includes(r.experimentUrl) || usedUrls.has(r.experimentUrl) || usedUrlsFromDb.includes(r.experimentUrl)) {
         return
       }
       expUrls.push(r.experimentUrl)
@@ -245,9 +254,11 @@ function startReadyGames(experiments, agreementIds, usersDb) {
     const experiment = experiments[experimentId]
     const scheduler = experiment.scheduler
     if (!scheduler) {
-      console.error(
-        `[ERROR] No scheduler set for experiment ${experimentId}. Check config.json.`,
-      )
+      if (experiment.enabled) {
+        console.error(
+          `[ERROR] No scheduler set for experiment ${experimentId}. Check config.json.`,
+        )
+      }
       continue
     }
 
@@ -292,8 +303,8 @@ function startReadyGames(experiments, agreementIds, usersDb) {
                 agreement.server,
               )
 
-              console.log(agreedUsersIds)
-              console.log(nonAgreedUsersIds)
+              //console.log(agreedUsersIds)
+              //console.log(nonAgreedUsersIds)
 
               //agreedUsersIds.forEach((userId) => {
               agreedUsersIds.forEach((compoundKey) => {
@@ -334,46 +345,29 @@ function startReadyGames(experiments, agreementIds, usersDb) {
 
 async function main() {
   const experiments = {}
-  if (options.resetDb && fs.existsSync(userDbFile)) {
-    console.log(`Deleting ${userDbFile} file!`)
-    fs.unlinkSync(userDbFile)
-  }
-  /**
-   *
-   * @type {Map<`${userId}:${experimentId}`, User>}
-   */
-  const usersDb = new UserDb(userDbFile)
+  // if (options.resetDb && fs.existsSync(userDbFile)) {
+  //   console.log(`Deleting ${userDbFile} file!`)
+  //   fs.unlinkSync(userDbFile)
+  // }
+  // /**
+  //  *
+  //  * @type {Map<`${userId}:${experimentId}`, User>}
+  //  */
+  // const usersDb = new UserDb(userDbFile)
+  // Load database from file
   await usersDb.load()
+  // Get used URLs from database
   const agreementIds = {}
+  // Load URLs from oTree servers
+  await getExperimentUrls(experiments)
+  
   const expToEnable = config.experiments.map((e) => e.name)
   // Load schedulers from directory
   // initialize returns a new ClassLoader
   const SchedulerPlugins = await ClassLoader.initialize("./schedulers")
 
   try {
-    // Get oTree experiment URLs from servers
-    otreeData = await getOtreeUrls(otreeIPs, otreeRestKey)
-    // Build experiments object
-    otreeData.forEach((r) => {
-      const exp = getOrSetValue(experiments, r.experimentName, {
-        name: r.experimentName,
-        enabled: expToEnable.includes(r.experimentName),
-        servers: {},
-      })
-      const expUrls = getOrSetValue(exp.servers, r.server, [])
-      if (expUrls.includes(r.experimentUrl)) {
-        return
-      }
-      expUrls.push(r.experimentUrl)
-    })
-  } catch (error) {
-    console.log(
-      `[ERROR] Failed to retrieve data from oTree server/s reason: ${error.message}`,
-    )
-    process.exit(1)
-  }
 
-  try {
     // Go through each experiment config and
     // load the appropriate scheduler class and
     // attach it to the experiments object
@@ -561,7 +555,7 @@ async function main() {
   })
 
   io.on("connection", (socket) => {
-    console.log('WS: connection')
+    //console.log('WS: connection')
     socket.on("landingPage", async (msg) => {
       const userId = msg.userId
       const experimentId = msg.experimentId
@@ -572,11 +566,10 @@ async function main() {
       // queued events.
       switch (user.state) {
         case "queued":
-          console.log(`User ${userId} already in state ${user.state}.`)
           user.changeState("queued")
           break
         case "inoTreePages":
-          console.log(`User ${userId} already in state ${user.state}.`)
+          console.log(`RE-REDIRECT ${userId}.`)
           const expUrl = user.redirectedUrl
           socket.emit("gameStart", { room: expUrl.toString() })
           break
@@ -636,7 +629,7 @@ async function main() {
 
     // User sends agreement to start game
     socket.on("userAgreed", (data) => {
-      console.log("[SOCKET][userAgreed] ", data)
+      //console.log("[SOCKET][userAgreed] ", data)
       const userId = data.userId
       const uuid = data.uuid
       const experimentId = data.experimentId
@@ -651,7 +644,7 @@ async function main() {
       // If everyone agrees, start game
       if (agreement.agree(compoundKey)) {
         console.log("Start Game!")
-        startGame(agreement.agreedUsers, agreement.urls, agreement.experimentId)
+        startGame(agreement.agreedUsers, agreement.urls, agreement.experimentId, agreement.agreementId)
       }
     })
 
@@ -667,7 +660,7 @@ async function main() {
    * @param users {string[]}
    * @param urls {string[]}
    */
-  function startGame(users, urls, experimentId) {
+  function startGame(users, urls, experimentId, agreementId) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`)
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
@@ -690,7 +683,9 @@ async function main() {
       //const participantCode = expUrl.pathname.split("/").pop()
       const sock = user.webSocket
       // Emit a custom event with the game room URL
-      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+      user.experimentUrl = expUrl
+      user.groupId = agreementId
+      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}&group_id=${user.groupId}`
       sock.emit("gameStart", { room: user.redirectedUrl })
       user.changeState("inoTreePages")
       console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)

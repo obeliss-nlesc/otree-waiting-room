@@ -1,15 +1,43 @@
 const VirtualUser = require('./virtual-user-ws')
+const fs = require('fs')
 
-vu01 = new VirtualUser("01234", "public_goods_game", "http://localhost:8060")
-vu02 = new VirtualUser("05678", "public_goods_game", "http://localhost:8060")
-vu03 = new VirtualUser("91011", "public_goods_game", "http://localhost:8060")
+function randomBetween(min, max) {  
+  return Math.floor(
+    Math.random() * (max - min) + min
+  )
+}
 
-vu01.connect().then(() => {
-  vu01.attemptNormalQueueFlow()
+const maxUsers = 1000
+const experimentId = "public_goods_game"
+const url = "http://localhost:8060"
+const virtUsers = {}
+
+for (let i = 0; i < maxUsers; i++) {
+  const id = 1000 + i
+  //const id = randomBetween(1, 9999999)
+  vu = new VirtualUser(id, experimentId, url)
+  virtUsers[id] = vu
+}
+
+Object.values(virtUsers).forEach(vu => {
+  vu.connect().then(() => {
+    vu.attemptNormalQueueFlow()
+  })
 })
-vu02.connect().then(() => {
-  vu02.attemptNormalQueueFlow()
-})
-vu03.connect().then(() => {
-  vu03.attemptNormalQueueFlow()
-})
+
+setTimeout(() => {
+  const ids = Object.values(virtUsers).filter(vu => {
+    if (vu.state == "redirected"){
+      return true
+    }
+  }).map(vu => {
+    return vu.userId
+  })
+  const idsString = JSON.stringify(ids, null, 2)
+  fs.writeFile('redirected_users.json', idsString, (err) => {
+    if (err) {
+      console.log('Error ', err)
+    } 
+  })
+}, 5000)
+

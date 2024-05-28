@@ -3,6 +3,7 @@
 const murmurhash = require("murmurhash")
 const fs = require("fs").promises
 const User = require("./user.js")
+let writeFlag = false
 
 class UserDb extends Map {
   constructor(file) {
@@ -20,6 +21,8 @@ class UserDb extends Map {
         data.forEach((u) => {
           const user = new User(u.userId, u.experimentId)
           user.redirectedUrl = u.redirectedUrl
+          user.experimentUrl = u.experimentUrl
+          user.groupId = u.groupId
           user.oTreeId = u.oTreeId
           user.tokenParams = u.tokenParams
           user.state = u.redirectedUrl ? u.state : user.state
@@ -38,6 +41,13 @@ class UserDb extends Map {
       return u.userId == userId
     })
   }
+  getUsedUrls(){
+    return Array.from(this.values()).filter((u) => {
+      return (u.experimentUrl)
+    }).map((u) => {
+      return u.experimentUrl
+    })
+  }
   dump() {
     const data = []
     this.forEach((v, k) => {
@@ -52,15 +62,21 @@ class UserDb extends Map {
       data.push(v.serialize())
     })
 
-    const dump = JSON.stringify(data)
+    const dump = JSON.stringify(data, null, 2)
     const h = murmurhash(dump, this.seed)
     console.log(`${h}:${this.lastHash}:${dump}`)
     if (this.lastHash !== h) {
+      if (writeFlag) {
+        console.log('WARN FILe STILL WRITING')
+      }
+      writeFlag = true
       fs.writeFile(this.file, dump)
         .then(() => {
+          writeFlag = false
           this.lastHash = h
         })
         .catch((err) => {
+          writeFlag = false
           console.error("[ERROR] Writing UserDb to file.")
         })
     }

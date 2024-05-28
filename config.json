@@ -2,6 +2,7 @@
   "experiments": [
     {
       "name": "guess_two_thirds",
+      "enabled": false,
       "scheduler": {
         "type": "GatScheduler",
         "params": {
@@ -11,6 +12,7 @@
     },
     {
       "name": "public_goods_game",
+      "enabled": true,
       "scheduler": {
         "type": "GatScheduler",
         "params": {
