@@ -30,9 +30,10 @@ class User {
   // DFA transition table
   transitionTable = {
     new: ["startedPage"],
-    startedPage: ["queued", "droppedOut"],
-    queued: ["queued", "agreed", "droppedOut"],
-    agreed: ["redirected", "timedOut", "queued", "droppedOut"],
+    startedPage: ["startedPage", "queued", "droppedOut"],
+    queued: ["queued", "agreed", "droppedOut", "waitAgreement"],
+    waitAgreement: ["waitAgreement", "queued", "agreed"],
+    agreed: ["agreed", "redirected", "timedOut", "queued", "droppedOut"],
     redirected: ["inoTreePages", "droppedOut"],
     inoTreePages: ["inoTreePages", "oTreeCompleted", "oTreeDroppedOut"],
     oTreeCompleted: ["final", "allowedBack", "droppedOut"],
@@ -41,7 +42,10 @@ class User {
     droppedOut: ["allowedBack", "nonAllowedBack"],
   }
 
-  reset() {
+  reset(x) {
+    if (this.state === "inoTreePages") {
+      console.log(`${x} WARNING resetting ${JSON.stringify(this.serialize(), null, 2)}`)
+    }
     this.state = "startedPage"
     this.timestamp = new Date().toISOString()
     this.listeners = []
@@ -86,10 +90,10 @@ class User {
       // Valid transition
       this.state = action
       this.timestamp = new Date().toISOString()
-      console.log(`${this.userId}'s state has been changed to ${this.state}`)
+      //console.log(`${this.userId}'s state has been changed to ${this.state}`)
       this.notifyListeners(this.state) // Notify listeners about the state change
     } else {
-      console.log("Invalid state transition. State not changed.")
+      console.log(`[${this.userId}] Invalid state transition. ${this.state} -> ${action}. State not changed.`)
     }
   }
 }

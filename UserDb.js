@@ -3,7 +3,7 @@
 const murmurhash = require("murmurhash")
 const fs = require("fs").promises
 const User = require("./user.js")
-let writeFlag = false
+const { SHA1 } = require("crypto-js")
 
 class UserDb extends Map {
   constructor(file) {
@@ -11,6 +11,8 @@ class UserDb extends Map {
     this.seed = 42
     this.file = file
     this.lastHash = 0
+    this.writeCounter = 0
+    this.forcedSave = 0
   }
   load() {
     let data = []
@@ -56,7 +58,31 @@ class UserDb extends Map {
 
     return JSON.stringify(data)
   }
-  save() {
+  save(){
+    this.writeCounter += 1
+    const currentCounter = this.writeCounter
+    setTimeout(() => {
+      if ( (currentCounter != this.writeCounter) || (this.writeCounter === 0) ){
+        return
+      }
+      this.#save()
+    }, 500)
+  }
+  forceSave(){
+    if (this.forcedSave > 0) {
+      return
+    }
+    this.forcedSave = 1 
+    const data = []
+    this.forEach((v, k) => {
+      data.push(v.serialize())
+    })
+    const dump = JSON.stringify(data, null, 2)
+
+    console.log("Saving DB: ", dump)
+    return fs.writeFile(this.file, dump)
+  }
+  #save() {
     const data = []
     this.forEach((v, k) => {
       data.push(v.serialize())
@@ -64,19 +90,14 @@ class UserDb extends Map {
 
     const dump = JSON.stringify(data, null, 2)
     const h = murmurhash(dump, this.seed)
-    console.log(`${h}:${this.lastHash}:${dump}`)
+    //console.log(`${h}:${this.lastHash}:${dump}`)
     if (this.lastHash !== h) {
-      if (writeFlag) {
-        console.log('WARN FILe STILL WRITING')
-      }
-      writeFlag = true
       fs.writeFile(this.file, dump)
         .then(() => {
-          writeFlag = false
           this.lastHash = h
+          this.writeCounter = 0
         })
         .catch((err) => {
-          writeFlag = false
           console.error("[ERROR] Writing UserDb to file.")
         })
     }

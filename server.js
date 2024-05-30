@@ -41,10 +41,6 @@ const port = options.port || "8060"
 const userDbFile = options.dbFile || "./data/userdb.json"
 //const publicKey = fs.readFileSync("./public-key.pem", "utf8")
 //
-process.on("SIGINT", function () {
-  console.log("\nGracefully shutting down from SIGINT (Ctrl-C)")
-  process.exit(0)
-})
 /**
  *
  * @type {Set<string>}
@@ -59,6 +55,14 @@ if (options.resetDb && fs.existsSync(userDbFile)) {
  * @type {Map<`${userId}:${experimentId}`, User>}
  */
 const usersDb = new UserDb(userDbFile)
+
+process.on("SIGINT", async () => {
+  console.log("\nGracefully shutting down from SIGINT (Ctrl-C)")
+  await usersDb.forceSave()
+  setTimeout(() => {
+    process.exit(0)
+  }, 1000)
+})
 
 function getOrSetValue(obj, key, defaultValue) {
   if (!(key in obj)) {
@@ -121,6 +125,8 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
 
 // Put back experiment urls
 function revertUrls(exp, urls, serverKey) {
+  // console.log(`reverting ${urls}`)
+  // console.log(`before ${JSON.stringify(Array.from(usedUrls))} ${exp.servers[serverKey].length}`)
   urls.forEach((url) => {
     usedUrls.delete(url)
     if (exp.servers[serverKey].includes(url)) {
@@ -128,6 +134,7 @@ function revertUrls(exp, urls, serverKey) {
     }
     exp.servers[serverKey].push(url)
   })
+  // console.log(`after ${JSON.stringify(Array.from(usedUrls))} ${exp.servers[serverKey].length}`)
 }
 
 function lastElement(arr) {
@@ -242,14 +249,14 @@ function agreeGame(users, uuid, agreement, usersDb) {
     const user = usersDb.get(compoundKey)
     const sock = user.webSocket
     if (!sock) {
-      console.error(`User ${userId} has not socket!`)
+      console.error(`User ${user.userId} has not socket!`)
       return
     }
     sock.emit("agree", { uuid: uuid, timeout: agreement.timeout })
   }
 }
 
-function startReadyGames(experiments, agreementIds, usersDb) {
+async function startReadyGames(experiments, agreementIds, usersDb) {
   for (const [experimentId, _] of Object.entries(experiments)) {
     const experiment = experiments[experimentId]
     const scheduler = experiment.scheduler
@@ -265,7 +272,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
     let canMaybeScheduleNext = true
     while (canMaybeScheduleNext) {
       canMaybeScheduleNext = false
-      const conditionObject = scheduler.checkConditionAndReturnUsers(
+      const conditionObject = await scheduler.checkConditionAndReturnUsers(
         experiments,
         usedUrls,
       )
@@ -273,7 +280,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
       if (conditionObject.condition) {
         //console.log(conditionObject)
         canMaybeScheduleNext = true
-        console.log("Enough users; waiting for agreement.")
+        //console.log("Enough users; waiting for agreement.")
         // Generate an agreement object which
         // waits for all users to 'agree' and
         // proceed to the game together
@@ -288,6 +295,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
           conditionObject.users.map((u) => u.redirectedUrl),
           conditionObject.server,
         )
+        console.log(`New agreement: ${agreement.agreementId} ${JSON.stringify(gameUsersIds)}.`)
         agreementIds[uuid] = agreement
         agreeGame(gameUsersIds, uuid, agreement, usersDb)
         // Agreement timeout function
@@ -309,7 +317,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
               //agreedUsersIds.forEach((userId) => {
               agreedUsersIds.forEach((compoundKey) => {
                 // const compoundKey = `${userId}:${agreement.experimentId}`
-                console.log(`agree: ${compoundKey}`)
+                //console.log(`agree: ${compoundKey}`)
                 const user = usersDb.get(compoundKey)
                 user.changeState("queued")
               })
@@ -317,9 +325,9 @@ function startReadyGames(experiments, agreementIds, usersDb) {
               nonAgreedUsersIds.forEach((compoundKey) => {
                 // usersDb.dump()
                 // const compoundKey = `${userId}:${agreement.experimentId}`
-                console.log(`Non agree: ${compoundKey}`)
+                //console.log(`Non agree: ${compoundKey}`)
                 const user = usersDb.get(compoundKey)
-                user.reset()
+                user.reset(2)
               })
             }
           },
@@ -332,10 +340,10 @@ function startReadyGames(experiments, agreementIds, usersDb) {
           conditionObject.waitForCount === 0 &&
           conditionObject.server === null
         ) {
-          console.warn(`[WARNING] Experiment ${experimentId} ran out of slots!`)
+          //console.warn(`[WARNING] Experiment ${experimentId} ran out of slots!`)
           scheduler.resetQueue()
           conditionObject.users.forEach((user) => {
-            user.reset()
+            user.reset(3)
           })
         }
       }
@@ -393,7 +401,7 @@ async function main() {
     process.exit(1)
   }
 
-  // Maybe only check for every new user queued instead on interval.
+  // // Maybe only check for every new user queued instead on interval.
   // setInterval(async () => {
   //   await getExperimentUrls(experiments)
   //   startReadyGames(experiments, agreementIds, usersDb)
@@ -511,8 +519,7 @@ async function main() {
   )
 
   app.get("/api/experiments", validateSignature, async (req, res) => {
-    console.log("HEADERS: ", req.headers)
-
+    //console.log("HEADERS: ", req.headers)
     res.status(201).json(experiments)
   })
 
@@ -539,7 +546,7 @@ async function main() {
       usersDb.get(compoundKey) || new User(userId, params.experimentId)
     user.tokenParams = params
     usersDb.set(compoundKey, user)
-    console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
+    //console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (
       fs.existsSync(
         __dirname + "/webpage_templates/" + params.experimentId + ".html",
@@ -566,19 +573,23 @@ async function main() {
       // queued events.
       switch (user.state) {
         case "queued":
-          user.changeState("queued")
+          //user.changeState("queued")
           break
         case "inoTreePages":
-          console.log(`RE-REDIRECT ${userId}.`)
-          const expUrl = user.redirectedUrl
-          socket.emit("gameStart", { room: expUrl.toString() })
+          //console.log(`RE-REDIRECT ${userId}.`)
+          //const expUrl = user.redirectedUrl
+          //socket.emit("gameStart", { room: expUrl.toString() })
+          break
+        case "agreed": 
+          break
+        case "waitAgreement": 
           break
         default:
           user.changeState("startedPage")
-          user.reset()
+          user.reset(1)
           usersDb.set(compoundKey, user)
           console.log(
-            `User ${userId} connected for experiment ${experimentId}.`,
+            `User ${userId} in state ${user.state} connected for experiment ${experimentId}.`,
           )
       }
     })
@@ -594,10 +605,24 @@ async function main() {
       }
       user.webSocket = socket
       if (user.state === "queued") {
-        console.log(`User ${userId} already queued`)
+        //console.log(`User ${userId} already queued`)
+        return
+      }
+      if (user.state === "waitAgreement") {
+        // User is waiting in an agreement
+        return
+      }
+      if (user.state === "agreed") {
+        // User is waiting in an agreement
+        return
+      }
+      if (user.state === "inoTreePages") {
+        //console.log(`User ${userId} already already redirected`)
+        socket.emit("gameStart", { room: user.redirectedUrl.toString() })
         return
       }
 
+      console.log(`NEw user: ${user.userId} ${user.state}`)
       user.addListenerForState("queued", async (user, state) => {
         const userId = user.userId
         const experimentId = user.experimentId
@@ -608,14 +633,14 @@ async function main() {
           )
         }
         const scheduler = experiment.scheduler
-        scheduler.queueUser(user)
+        await scheduler.queueUser(user)
         // Condition object returns
         // {
         //  condition: true|false
         //  users: [] of type Users
         //  waitForCount: int
         // }
-        console.log(`User ${userId} in event listener in state ${state}`)
+        //console.log(`User ${userId} in event listener in state ${state}`)
 
         user.webSocket.emit("wait", {
           playersToWaitFor: scheduler.playersToWaitFor(),
@@ -643,7 +668,7 @@ async function main() {
       usersDb.get(compoundKey).changeState("agreed")
       // If everyone agrees, start game
       if (agreement.agree(compoundKey)) {
-        console.log("Start Game!")
+        console.log(`Start Game! agreement ${agreement.agreementId}.`)
         startGame(agreement.agreedUsers, agreement.urls, agreement.experimentId, agreement.agreementId)
       }
     })
@@ -685,12 +710,12 @@ async function main() {
       // Emit a custom event with the game room URL
       user.experimentUrl = expUrl
       user.groupId = agreementId
-      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}&group_id=${user.groupId}`
-      sock.emit("gameStart", { room: user.redirectedUrl })
+      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
       user.changeState("inoTreePages")
+      sock.emit("gameStart", { room: user.redirectedUrl })
       console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
 
-      //We do not need to update vars on oTree anymore since they are not comming
+      //We do not need to update vars on oTree anymore since they are not coming
       //through the url encoding
       //
       // const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
