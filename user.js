@@ -44,7 +44,9 @@ class User {
 
   reset(x) {
     if (this.state === "inoTreePages") {
-      console.log(`${x} WARNING resetting ${JSON.stringify(this.serialize(), null, 2)}`)
+      console.log(
+        `${x} WARNING resetting ${JSON.stringify(this.serialize(), null, 2)}`,
+      )
     }
     this.state = "startedPage"
     this.timestamp = new Date().toISOString()
@@ -60,7 +62,7 @@ class User {
       this.listeners[state] = []
     }
     const index = this.listeners[state].indexOf(listener)
-    if (index === -1){
+    if (index === -1) {
       this.listeners[state].push(listener)
     }
   }
@@ -96,7 +98,9 @@ class User {
       //console.log(`${this.userId}'s state has been changed to ${this.state}`)
       this.notifyListeners(this.state) // Notify listeners about the state change
     } else {
-      console.log(`[${this.userId}] Invalid state transition. ${this.state} -> ${action}. State not changed.`)
+      console.log(
+        `[${this.userId}] Invalid state transition. ${this.state} -> ${action}. State not changed.`,
+      )
     }
   }
 }

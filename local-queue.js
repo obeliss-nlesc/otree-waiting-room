@@ -1,4 +1,4 @@
-var Mutex = require('async-mutex').Mutex
+var Mutex = require("async-mutex").Mutex
 // A LocalQueue implementation
 class LocalQueue {
   constructor(queueName) {

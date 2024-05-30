@@ -20,19 +20,21 @@ class UserDb extends Map {
       .readFile(this.file)
       .then((d) => {
         data = JSON.parse(d)
-        data.filter((u)=> {
-          return (u.state === "inoTreePages")
-        }).forEach((u) => {
-          const user = new User(u.userId, u.experimentId)
-          user.redirectedUrl = u.redirectedUrl
-          user.experimentUrl = u.experimentUrl
-          user.groupId = u.groupId
-          user.oTreeId = u.oTreeId
-          user.tokenParams = u.tokenParams
-          user.state = u.redirectedUrl ? u.state : user.state
-          const compoundKey = `${user.userId}:${user.experimentId}`
-          this.set(compoundKey, user)
-        })
+        data
+          .filter((u) => {
+            return u.state === "inoTreePages"
+          })
+          .forEach((u) => {
+            const user = new User(u.userId, u.experimentId)
+            user.redirectedUrl = u.redirectedUrl
+            user.experimentUrl = u.experimentUrl
+            user.groupId = u.groupId
+            user.oTreeId = u.oTreeId
+            user.tokenParams = u.tokenParams
+            user.state = u.redirectedUrl ? u.state : user.state
+            const compoundKey = `${user.userId}:${user.experimentId}`
+            this.set(compoundKey, user)
+          })
       })
       .catch((err) => {
         console.error(
@@ -45,12 +47,14 @@ class UserDb extends Map {
       return u.userId == userId
     })
   }
-  getUsedUrls(){
-    return Array.from(this.values()).filter((u) => {
-      return (u.experimentUrl)
-    }).map((u) => {
-      return u.experimentUrl
-    })
+  getUsedUrls() {
+    return Array.from(this.values())
+      .filter((u) => {
+        return u.experimentUrl
+      })
+      .map((u) => {
+        return u.experimentUrl
+      })
   }
   dump() {
     const data = []
@@ -60,21 +64,21 @@ class UserDb extends Map {
 
     return JSON.stringify(data)
   }
-  save(){
+  save() {
     this.writeCounter += 1
     const currentCounter = this.writeCounter
     setTimeout(() => {
-      if ( (currentCounter != this.writeCounter) || (this.writeCounter === 0) ){
+      if (currentCounter != this.writeCounter || this.writeCounter === 0) {
         return
       }
       this.#save()
     }, 500)
   }
-  forceSave(){
+  forceSave() {
     if (this.forcedSave > 0) {
       return
     }
-    this.forcedSave = 1 
+    this.forcedSave = 1
     const data = []
     this.forEach((v, k) => {
       data.push(v.serialize())

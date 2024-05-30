@@ -1,8 +1,8 @@
-const { weightSrvRecords } = require('ioredis/built/cluster/util')
-const io = require('socket.io-client')
+const { weightSrvRecords } = require("ioredis/built/cluster/util")
+const io = require("socket.io-client")
 
 class VirtualUser {
-  constructor(userId, experimentId, serverUrl){
+  constructor(userId, experimentId, serverUrl) {
     this.userId = userId
     this.experimentId = experimentId
     this.serverUrl = serverUrl
@@ -11,17 +11,17 @@ class VirtualUser {
     this.flag = 0
   }
   connect(serverUrl) {
-    return new Promise((resolve,reject) => {
+    return new Promise((resolve, reject) => {
       this.serverUrl = this.serverUrl || serverUrl
       this.socket = io(this.serverUrl)
-      this.socket.on('connect', () => {
+      this.socket.on("connect", () => {
         this.flag = 0
         // console.log(`[${this.userId}] connected to ${this.serverUrl}`)
         resolve()
       })
     })
   }
-  #setupSocketEvents(){
+  #setupSocketEvents() {
     if (this.state == "redirected") {
       return
     }
@@ -33,7 +33,7 @@ class VirtualUser {
       this.flag = 0
       this.state = "queued"
     })
-    this.socket.on("queueUpdate" ,(data) => {
+    this.socket.on("queueUpdate", (data) => {
       this.flag = 0
       // Nothing to do
     })
@@ -50,48 +50,46 @@ class VirtualUser {
       this.socket = null
       this.state = "disconnected"
     })
-
   }
-  #goToLandingPage(){
-      if (this.state == "redirected") {
+  #goToLandingPage() {
+    if (this.state == "redirected") {
+      return
+    }
+    // console.log(`${this.userId} emmiting landingPage`)
+    this.socket.emit("landingPage", {
+      experimentId: this.experimentId,
+      userId: this.userId,
+    })
+    // console.log(`${this.userId} emmiting newUser`)
+    this.socket.emit("newUser", {
+      experimentId: this.experimentId,
+      userId: this.userId,
+    })
+    const that = this
+    const intervatl = setInterval(() => {
+      if (that.state == "redirected" || !that.socket) {
+        clearInterval(intervatl)
         return
       }
-      // console.log(`${this.userId} emmiting landingPage`)
-      this.socket.emit("landingPage", {
-        experimentId: this.experimentId,
-        userId: this.userId
-      })
-      // console.log(`${this.userId} emmiting newUser`)
-      this.socket.emit("newUser", {
-        experimentId: this.experimentId,
-        userId: this.userId
-      })
-      const that = this
-      const intervatl = setInterval(() => {
-        if ((that.state == "redirected") || (!that.socket)) {
-          clearInterval(intervatl)
-          return
-        }
-        if (that.flag > 0) {
-          that.socket.emit("newUser", {
-            experimentId: that.experimentId,
-            userId: that.userId
-          })
-        } else {
-          that.flag += 1
-        }
-      }, 5000)
-
+      if (that.flag > 0) {
+        that.socket.emit("newUser", {
+          experimentId: that.experimentId,
+          userId: that.userId,
+        })
+      } else {
+        that.flag += 1
+      }
+    }, 5000)
   }
 
   #flipCoin() {
-      // Generate a random number between 0 and 1
-      const randomNumber = Math.random();
-      // Return "Heads" if the number is less than 0.5, otherwise return "Tails"
-      return (randomNumber < 0.5)
+    // Generate a random number between 0 and 1
+    const randomNumber = Math.random()
+    // Return "Heads" if the number is less than 0.5, otherwise return "Tails"
+    return randomNumber < 0.5
   }
 
-  attemptQueueFlow(random){
+  attemptQueueFlow(random) {
     this.#setupSocketEvents()
 
     this.socket.on("agree", (data) => {
@@ -117,11 +115,11 @@ class VirtualUser {
       // console.log(`${this.userId} emmiting newUser`)
       this.socket.emit("newUser", {
         experimentId: this.experimentId,
-        userId: this.userId
+        userId: this.userId,
       })
     })
     this.#goToLandingPage()
-  }//attemptQueueFlow
+  } //attemptQueueFlow
 }
 
 module.exports = VirtualUser

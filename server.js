@@ -229,7 +229,11 @@ async function getExperimentUrls(experiments) {
       })
       const expUrls = getOrSetValue(exp.servers, r.server, [])
       //console.log(`expUrls ${expUrls} oTreeUrls: ${r.experimentUrl}`)
-      if (expUrls.includes(r.experimentUrl) || usedUrls.has(r.experimentUrl) || usedUrlsFromDb.includes(r.experimentUrl)) {
+      if (
+        expUrls.includes(r.experimentUrl) ||
+        usedUrls.has(r.experimentUrl) ||
+        usedUrlsFromDb.includes(r.experimentUrl)
+      ) {
         return
       }
       expUrls.push(r.experimentUrl)
@@ -295,7 +299,9 @@ async function startReadyGames(experiments, agreementIds, usersDb) {
           conditionObject.users.map((u) => u.redirectedUrl),
           conditionObject.server,
         )
-        console.log(`New agreement: ${agreement.agreementId} ${JSON.stringify(gameUsersIds)}.`)
+        console.log(
+          `New agreement: ${agreement.agreementId} ${JSON.stringify(gameUsersIds)}.`,
+        )
         agreementIds[uuid] = agreement
         agreeGame(gameUsersIds, uuid, agreement, usersDb)
         // Agreement timeout function
@@ -368,14 +374,13 @@ async function main() {
   const agreementIds = {}
   // Load URLs from oTree servers
   await getExperimentUrls(experiments)
-  
+
   const expToEnable = config.experiments.map((e) => e.name)
   // Load schedulers from directory
   // initialize returns a new ClassLoader
   const SchedulerPlugins = await ClassLoader.initialize("./schedulers")
 
   try {
-
     // Go through each experiment config and
     // load the appropriate scheduler class and
     // attach it to the experiments object
@@ -580,9 +585,9 @@ async function main() {
           //const expUrl = user.redirectedUrl
           //socket.emit("gameStart", { room: expUrl.toString() })
           break
-        case "agreed": 
+        case "agreed":
           break
-        case "waitAgreement": 
+        case "waitAgreement":
           break
         default:
           user.changeState("startedPage")
@@ -670,7 +675,12 @@ async function main() {
       // If everyone agrees, start game
       if (agreement.agree(compoundKey)) {
         console.log(`Start Game! agreement ${agreement.agreementId}.`)
-        startGame(agreement.agreedUsers, agreement.urls, agreement.experimentId, agreement.agreementId)
+        startGame(
+          agreement.agreedUsers,
+          agreement.urls,
+          agreement.experimentId,
+          agreement.agreementId,
+        )
       }
     })
 
