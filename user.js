@@ -59,7 +59,10 @@ class User {
     if (!this.listeners[state]) {
       this.listeners[state] = []
     }
-    this.listeners[state].push(listener)
+    const index = this.listeners[state].indexOf(listener)
+    if (index === -1){
+      this.listeners[state].push(listener)
+    }
   }
 
   // Remove a listener for a specific state change

@@ -16,7 +16,7 @@ class VirtualUser {
       this.socket = io(this.serverUrl)
       this.socket.on('connect', () => {
         this.flag = 0
-        console.log(`[${this.userId}] connected to ${this.serverUrl}`)
+        // console.log(`[${this.userId}] connected to ${this.serverUrl}`)
         resolve()
       })
     })
@@ -46,7 +46,7 @@ class VirtualUser {
     })
     this.socket.on("disconnect", () => {
       this.flag = 0
-      console.log(`[${this.userId}] disconnected from ${this.serverUrl}`)
+      // console.log(`[${this.userId}] disconnected from ${this.serverUrl}`)
       this.socket = null
       this.state = "disconnected"
     })
@@ -56,12 +56,12 @@ class VirtualUser {
       if (this.state == "redirected") {
         return
       }
-      console.log(`${this.userId} emmiting landingPage`)
+      // console.log(`${this.userId} emmiting landingPage`)
       this.socket.emit("landingPage", {
         experimentId: this.experimentId,
         userId: this.userId
       })
-      console.log(`${this.userId} emmiting newUser`)
+      // console.log(`${this.userId} emmiting newUser`)
       this.socket.emit("newUser", {
         experimentId: this.experimentId,
         userId: this.userId
@@ -80,7 +80,7 @@ class VirtualUser {
         } else {
           that.flag += 1
         }
-      }, 1000)
+      }, 5000)
 
   }
 
@@ -97,10 +97,10 @@ class VirtualUser {
     this.socket.on("agree", (data) => {
       this.flag = 0
       if (random && this.#flipCoin()) {
-        console.log(`${this.userId} ignoring agreement`)
+        // console.log(`${this.userId} ignoring agreement`)
         return
       }
-      console.log(`${this.userId} accepting agreement`)
+      // console.log(`${this.userId} accepting agreement`)
       const uuid = data.uuid
       // Choose to agree or not
       this.socket.emit("userAgreed", {
@@ -114,7 +114,7 @@ class VirtualUser {
     this.socket.on("reset", (data) => {
       this.flag = 0
       this.state = "startedPage"
-      console.log(`${this.userId} emmiting newUser`)
+      // console.log(`${this.userId} emmiting newUser`)
       this.socket.emit("newUser", {
         experimentId: this.experimentId,
         userId: this.userId

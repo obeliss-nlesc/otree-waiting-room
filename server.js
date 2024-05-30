@@ -573,7 +573,7 @@ async function main() {
       // queued events.
       switch (user.state) {
         case "queued":
-          //user.changeState("queued")
+          user.changeState("queued")
           break
         case "inoTreePages":
           //console.log(`RE-REDIRECT ${userId}.`)
@@ -604,10 +604,11 @@ async function main() {
         return
       }
       user.webSocket = socket
-      if (user.state === "queued") {
-        //console.log(`User ${userId} already queued`)
-        return
-      }
+      // if (user.state === "queued") {
+      //   user.changeState("queued")
+      //   //console.log(`User ${userId} already queued`)
+      //   return
+      // }
       if (user.state === "waitAgreement") {
         // User is waiting in an agreement
         return
@@ -622,7 +623,7 @@ async function main() {
         return
       }
 
-      console.log(`NEw user: ${user.userId} ${user.state}`)
+      // console.log(`NEw user: ${user.userId} ${user.state}`)
       user.addListenerForState("queued", async (user, state) => {
         const userId = user.userId
         const experimentId = user.experimentId

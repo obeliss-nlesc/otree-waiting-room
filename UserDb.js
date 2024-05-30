@@ -20,7 +20,9 @@ class UserDb extends Map {
       .readFile(this.file)
       .then((d) => {
         data = JSON.parse(d)
-        data.forEach((u) => {
+        data.filter((u)=> {
+          return (u.state === "inoTreePages")
+        }).forEach((u) => {
           const user = new User(u.userId, u.experimentId)
           user.redirectedUrl = u.redirectedUrl
           user.experimentUrl = u.experimentUrl
