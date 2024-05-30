@@ -5,6 +5,8 @@ class User {
     this.tokenParams = null
     this.oTreeId = null
     this.redirectedUrl = null
+    this.experimentUrl = null
+    this.groupId = null
     this.state = "new"
     this.listeners = []
     this.webSocket = null
@@ -16,6 +18,8 @@ class User {
       userId: this.userId,
       experimentId: this.experimentId,
       redirectedUrl: this.redirectedUrl,
+      groupId: this.groupId,
+      experimentUrl: this.experimentUrl,
       state: this.state,
       oTreeId: this.oTreeId,
       tokenParams: this.tokenParams,
@@ -26,9 +30,10 @@ class User {
   // DFA transition table
   transitionTable = {
     new: ["startedPage"],
-    startedPage: ["queued", "droppedOut"],
-    queued: ["queued", "agreed", "droppedOut"],
-    agreed: ["redirected", "timedOut", "queued", "droppedOut"],
+    startedPage: ["startedPage", "queued", "droppedOut"],
+    queued: ["queued", "agreed", "droppedOut", "waitAgreement"],
+    waitAgreement: ["waitAgreement", "queued", "agreed"],
+    agreed: ["agreed", "redirected", "timedOut", "queued", "droppedOut"],
     redirected: ["inoTreePages", "droppedOut"],
     inoTreePages: ["inoTreePages", "oTreeCompleted", "oTreeDroppedOut"],
     oTreeCompleted: ["final", "allowedBack", "droppedOut"],
@@ -38,6 +43,11 @@ class User {
   }
 
   reset() {
+    if (this.state === "inoTreePages") {
+      console.log(
+        `[${this.userId}] Resetting user while in state ${this.state}.`,
+      )
+    }
     this.state = "startedPage"
     this.timestamp = new Date().toISOString()
     this.listeners = []
@@ -51,7 +61,10 @@ class User {
     if (!this.listeners[state]) {
       this.listeners[state] = []
     }
-    this.listeners[state].push(listener)
+    const index = this.listeners[state].indexOf(listener)
+    if (index === -1) {
+      this.listeners[state].push(listener)
+    }
   }
 
   // Remove a listener for a specific state change
@@ -82,10 +95,12 @@ class User {
       // Valid transition
       this.state = action
       this.timestamp = new Date().toISOString()
-      console.log(`${this.userId}'s state has been changed to ${this.state}`)
+      //console.log(`${this.userId}'s state has been changed to ${this.state}`)
       this.notifyListeners(this.state) // Notify listeners about the state change
     } else {
-      console.log("Invalid state transition. State not changed.")
+      console.log(
+        `[${this.userId}] Invalid state transition. ${this.state} -> ${action}. State not changed.`,
+      )
     }
   }
 }

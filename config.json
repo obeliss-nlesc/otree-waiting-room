@@ -2,6 +2,7 @@
   "experiments": [
     {
       "name": "guess_two_thirds",
+      "enabled": false,
       "scheduler": {
         "type": "GatScheduler",
         "params": {
@@ -11,15 +12,7 @@
     },
     {
       "name": "public_goods_game",
-      "scheduler": {
-        "type": "GatScheduler",
-        "params": {
-          "min": "3"
-        }
-      }
-    },
-    {
-      "name": "DropOutTest",
+      "enabled": true,
       "scheduler": {
         "type": "GatScheduler",
         "params": {

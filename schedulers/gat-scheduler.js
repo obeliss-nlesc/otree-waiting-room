@@ -17,16 +17,24 @@ class GatScheduler {
   /*
    * @type user {User}
    */
-  queueUser(user) {
+  async queueUser(user) {
+    // await this.queue.wait()
     // Queue user object which allows schedulers to decide on additional parameters
     // passed on in token like age and gender.
     //console.log(`GAT queued user: ${user.userId} params ${JSON.stringify(user.tokenParams)}`)
     this.queue.push(user)
+    // this.queue.unlock()
   }
 
   resetQueue() {
     // Empties the Queue
     this.queue.reset()
+  }
+
+  getQueuedUserIds() {
+    return this.queue.getQueue().map((u) => {
+      return u.userId
+    })
   }
 
   playersToWaitFor() {
@@ -65,6 +73,7 @@ class GatScheduler {
   }
 
   checkConditionAndReturnUsers(experiments, usedUrls) {
+    // await this.queue.wait()
     const queueSize = this.queue.size()
     const falseCondition = {
       condition: false,
@@ -80,6 +89,7 @@ class GatScheduler {
         experiments[this.experimentName].servers
       )
     ) {
+      // this.queue.unlock()
       return falseCondition
     }
 
@@ -106,12 +116,14 @@ class GatScheduler {
           const url = serverUrls.pop()
           if (!usedUrls.has(url)) {
             user.redirectedUrl = url
+            user.changeState("waitAgreement")
             usedUrls.add(url)
             break
           }
           serverUrls.unshift(url)
         }
       }
+      // this.queue.unlock()
       return {
         condition: true,
         users: users,
@@ -120,6 +132,7 @@ class GatScheduler {
       }
     }
 
+    // this.queue.unlock()
     return falseCondition
   }
 }

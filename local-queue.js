@@ -3,6 +3,7 @@ class LocalQueue {
   constructor(queueName) {
     this.name = queueName
     this.queue = []
+    this.simpleLock = 0
   }
 
   push(item) {
@@ -14,6 +15,27 @@ class LocalQueue {
 
   reset() {
     this.queue.length = 0
+  }
+
+  lock() {
+    this.simpleLock = 1
+  }
+
+  unlock() {
+    this.simpleLock = 0
+  }
+
+  wait() {
+    return new Promise((resolve, reject) => {
+      const testLockInterval = setInterval(() => {
+        if (this.simpleLock > 0) {
+          return
+        }
+        this.lock()
+        clearInterval(testLockInterval)
+        resolve()
+      }, 200)
+    })
   }
 
   pushAndGetQueue(item) {
