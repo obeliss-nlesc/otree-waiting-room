@@ -581,7 +581,6 @@ async function main() {
           user.changeState("queued")
           break
         case "inoTreePages":
-          //console.log(`RE-REDIRECT ${userId}.`)
           //const expUrl = user.redirectedUrl
           //socket.emit("gameStart", { room: expUrl.toString() })
           break
@@ -686,7 +685,7 @@ async function main() {
 
     // Handle disconnection
     socket.on("disconnect", () => {
-      console.log("User disconnected")
+      //console.log("User disconnected")
     })
   })
 
@@ -724,7 +723,7 @@ async function main() {
       user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
       user.changeState("inoTreePages")
       sock.emit("gameStart", { room: user.redirectedUrl })
-      console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
+      // console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
 
       //We do not need to update vars on oTree anymore since they are not coming
       //through the url encoding

@@ -1,11 +1,9 @@
-var Mutex = require("async-mutex").Mutex
 // A LocalQueue implementation
 class LocalQueue {
   constructor(queueName) {
     this.name = queueName
     this.queue = []
-    this.mutex = new Mutex()
-    this.simple_lock = 0
+    this.simpleLock = 0
   }
 
   push(item) {
@@ -20,24 +18,17 @@ class LocalQueue {
   }
 
   lock() {
-    this.simple_lock = 1
-    // return this.mutex.acquire()
+    this.simpleLock = 1
   }
 
   unlock() {
-    this.simple_lock = 0
-    // this.mutex.release()
+    this.simpleLock = 0
   }
 
   wait() {
     return new Promise((resolve, reject) => {
-      // this.mutex.waitForUnlock().then(() => {
-      //   this.lock().then(() => {
-      //     resolve()
-      //   })
-      // })
       const testLockInterval = setInterval(() => {
-        if (this.simple_lock > 0) {
+        if (this.simpleLock > 0) {
           return
         }
         this.lock()

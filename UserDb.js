@@ -85,7 +85,6 @@ class UserDb extends Map {
     })
     const dump = JSON.stringify(data, null, 2)
 
-    console.log("Saving DB: ", dump)
     return fs.writeFile(this.file, dump)
   }
   #save() {

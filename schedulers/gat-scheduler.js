@@ -18,12 +18,12 @@ class GatScheduler {
    * @type user {User}
    */
   async queueUser(user) {
-    await this.queue.wait()
+    // await this.queue.wait()
     // Queue user object which allows schedulers to decide on additional parameters
     // passed on in token like age and gender.
     //console.log(`GAT queued user: ${user.userId} params ${JSON.stringify(user.tokenParams)}`)
     this.queue.push(user)
-    this.queue.unlock()
+    // this.queue.unlock()
   }
 
   resetQueue() {
@@ -73,7 +73,7 @@ class GatScheduler {
   }
 
   async checkConditionAndReturnUsers(experiments, usedUrls) {
-    await this.queue.wait()
+    // await this.queue.wait()
     const queueSize = this.queue.size()
     const falseCondition = {
       condition: false,
@@ -89,7 +89,7 @@ class GatScheduler {
         experiments[this.experimentName].servers
       )
     ) {
-      this.queue.unlock()
+      // this.queue.unlock()
       return falseCondition
     }
 
@@ -110,7 +110,6 @@ class GatScheduler {
         continue
       }
 
-      console.log(`before: ${JSON.stringify(this.getQueuedUserIds())}`)
       const users = this.queue.pop(this.min)
       for (const user of users) {
         while (true) {
@@ -124,8 +123,7 @@ class GatScheduler {
           serverUrls.unshift(url)
         }
       }
-      console.log(`after: ${JSON.stringify(this.getQueuedUserIds())}`)
-      this.queue.unlock()
+      // this.queue.unlock()
       return {
         condition: true,
         users: users,
@@ -134,7 +132,7 @@ class GatScheduler {
       }
     }
 
-    this.queue.unlock()
+    // this.queue.unlock()
     return falseCondition
   }
 }

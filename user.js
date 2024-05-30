@@ -42,10 +42,10 @@ class User {
     droppedOut: ["allowedBack", "nonAllowedBack"],
   }
 
-  reset(x) {
+  reset() {
     if (this.state === "inoTreePages") {
       console.log(
-        `${x} WARNING resetting ${JSON.stringify(this.serialize(), null, 2)}`,
+        `[${this.userId}] Resetting user while in state ${this.state}.`
       )
     }
     this.state = "startedPage"
