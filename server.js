@@ -260,7 +260,7 @@ function agreeGame(users, uuid, agreement, usersDb) {
   }
 }
 
-async function startReadyGames(experiments, agreementIds, usersDb) {
+function startReadyGames(experiments, agreementIds, usersDb) {
   for (const [experimentId, _] of Object.entries(experiments)) {
     const experiment = experiments[experimentId]
     const scheduler = experiment.scheduler
@@ -276,7 +276,7 @@ async function startReadyGames(experiments, agreementIds, usersDb) {
     let canMaybeScheduleNext = true
     while (canMaybeScheduleNext) {
       canMaybeScheduleNext = false
-      const conditionObject = await scheduler.checkConditionAndReturnUsers(
+      const conditionObject = scheduler.checkConditionAndReturnUsers(
         experiments,
         usedUrls,
       )

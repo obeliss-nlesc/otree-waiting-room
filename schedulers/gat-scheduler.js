@@ -72,7 +72,7 @@ class GatScheduler {
     return Object.values(experiment.servers).some((s) => s.length >= this.min)
   }
 
-  async checkConditionAndReturnUsers(experiments, usedUrls) {
+  checkConditionAndReturnUsers(experiments, usedUrls) {
     // await this.queue.wait()
     const queueSize = this.queue.size()
     const falseCondition = {

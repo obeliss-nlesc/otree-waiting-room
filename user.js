@@ -45,7 +45,7 @@ class User {
   reset() {
     if (this.state === "inoTreePages") {
       console.log(
-        `[${this.userId}] Resetting user while in state ${this.state}.`
+        `[${this.userId}] Resetting user while in state ${this.state}.`,
       )
     }
     this.state = "startedPage"

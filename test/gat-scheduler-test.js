@@ -29,6 +29,7 @@ test("test GAT scheduler with enough rooms", () => {
     },
   )
   users.forEach((user) => {
+    user.changeState("queued")
     scheduler.queueUser(user)
   })
   assert.strictEqual(scheduler.queue.size(), 7)
@@ -92,6 +93,7 @@ test("test GAT scheduler without enough rooms", () => {
     },
   )
   users.forEach((user) => {
+    user.changeState("queued")
     scheduler.queueUser(user)
   })
   assert.strictEqual(scheduler.queue.size(), 7)
@@ -145,6 +147,7 @@ test("test GAT scheduler with used URLs", () => {
     return new User(userId, experimentName)
   })
   users.forEach((user) => {
+    user.changeState("queued")
     scheduler.queueUser(user)
   })
   assert.strictEqual(scheduler.queue.size(), 3)
