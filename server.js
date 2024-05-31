@@ -647,9 +647,9 @@ async function main() {
         // }
         //console.log(`User ${userId} in event listener in state ${state}`)
 
-        // User state can switch between start of function and here 
+        // User state can switch between start of function and here
         // e.g. to agree state. So double check again
-        if (user.state === "queued"){
+        if (user.state === "queued") {
           user.webSocket.emit("wait", {
             playersToWaitFor: scheduler.playersToWaitFor(),
             maxPlayers: scheduler.minPlayersNeeded(),
