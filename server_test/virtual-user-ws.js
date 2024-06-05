@@ -55,12 +55,10 @@ class VirtualUser {
     if (this.state == "redirected") {
       return
     }
-    // console.log(`${this.userId} emmiting landingPage`)
     this.socket.emit("landingPage", {
       experimentId: this.experimentId,
       userId: this.userId,
     })
-    // console.log(`${this.userId} emmiting newUser`)
     this.socket.emit("newUser", {
       experimentId: this.experimentId,
       userId: this.userId,
@@ -85,7 +83,6 @@ class VirtualUser {
   #flipCoin() {
     // Generate a random number between 0 and 1
     const randomNumber = Math.random()
-    // Return "Heads" if the number is less than 0.5, otherwise return "Tails"
     return randomNumber < 0.5
   }
 
@@ -94,13 +91,12 @@ class VirtualUser {
 
     this.socket.on("agree", (data) => {
       this.flag = 0
+      // Choose to agree or not
       if (random && this.#flipCoin()) {
-        // console.log(`${this.userId} ignoring agreement`)
+        // do not agree and wait for timeout
         return
       }
-      // console.log(`${this.userId} accepting agreement`)
       const uuid = data.uuid
-      // Choose to agree or not
       this.socket.emit("userAgreed", {
         experimentId: this.experimentId,
         userId: this.userId,
@@ -112,7 +108,6 @@ class VirtualUser {
     this.socket.on("reset", (data) => {
       this.flag = 0
       this.state = "startedPage"
-      // console.log(`${this.userId} emmiting newUser`)
       this.socket.emit("newUser", {
         experimentId: this.experimentId,
         userId: this.userId,

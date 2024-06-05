@@ -19,6 +19,8 @@ for (let i = 0; i < maxUsers; i++) {
 
 Object.values(virtUsers).forEach((vu) => {
   vu.connect().then(() => {
+    // true: random agree or not agree
+    // false: always agree
     vu.attemptQueueFlow(true)
   })
 })
