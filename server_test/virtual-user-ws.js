@@ -16,8 +16,14 @@ class VirtualUser {
       this.socket = io(this.serverUrl)
       this.socket.on("connect", () => {
         this.flag = 0
-        // console.log(`[${this.userId}] connected to ${this.serverUrl}`)
+        console.log(`[${this.userId}] connected.`)
+        this.state = "connected"
         resolve()
+      })
+      this.socket.on("connect_error", (err) => {
+        console.log(`[${this.userId}] error connection.`)
+        this.sate = "error"
+        // reject(err)
       })
     })
   }
@@ -30,10 +36,12 @@ class VirtualUser {
       return
     }
     this.socket.on("wait", (data) => {
+      console.log(`[${this.userId}] received wait.`)
       this.flag = 0
       this.state = "queued"
     })
     this.socket.on("queueUpdate", (data) => {
+      console.log(`[${this.userId}] received queueUpdate.`)
       this.flag = 0
       // Nothing to do
     })
@@ -65,6 +73,14 @@ class VirtualUser {
     })
     const that = this
     const intervatl = setInterval(() => {
+      if ((this.state == "connected") || (this.state == "error")) {
+        this.socket.close()
+        clearInterval(intervatl)
+        console.log(`[${this.userId}] reconnecting.`)
+        this.socket = io(this.serverUrl)
+        this.attemptQueueFlow(true)
+        return
+      }
       if (that.state == "redirected" || !that.socket) {
         clearInterval(intervatl)
         return
@@ -75,6 +91,7 @@ class VirtualUser {
           userId: that.userId,
         })
       } else {
+        // console.log(`[${that.userId}] in stuck interval.`)
         that.flag += 1
       }
     }, 5000)
@@ -90,6 +107,7 @@ class VirtualUser {
     this.#setupSocketEvents()
 
     this.socket.on("agree", (data) => {
+      console.log(`[${this.userId}] received agree.`)
       this.flag = 0
       // Choose to agree or not
       if (random && this.#flipCoin()) {
@@ -106,6 +124,7 @@ class VirtualUser {
     })
 
     this.socket.on("reset", (data) => {
+      console.log(`[${this.userId}] received reset.`)
       this.flag = 0
       this.state = "startedPage"
       this.socket.emit("newUser", {
