@@ -74,7 +74,7 @@ class VirtualUser {
 
     const intervatl = setInterval(() => {
       // If user is stuck (server overload) restart flow
-      if ((this.state == "connected") || (this.state == "error")) {
+      if (this.state == "connected" || this.state == "error") {
         this.socket.close()
         clearInterval(intervatl)
         // console.log(`[${this.userId}] reconnecting.`)

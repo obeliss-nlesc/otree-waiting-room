@@ -5,7 +5,7 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min) + min)
 }
 
-const maxUsers = (parseInt(process.argv[2])) ? parseInt(process.argv[2]) : 100
+const maxUsers = parseInt(process.argv[2]) ? parseInt(process.argv[2]) : 100
 const experimentId = "public_goods_game"
 const url = "http://localhost:8060"
 const virtUsers = {}

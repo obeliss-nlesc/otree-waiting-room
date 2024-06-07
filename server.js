@@ -298,7 +298,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
           gameUsersIds,
           conditionObject.users.map((u) => u.redirectedUrl),
           conditionObject.server,
-          experiment.agreementTimeout
+          experiment.agreementTimeout,
         )
         console.log(
           `New agreement: ${agreement.agreementId} ${JSON.stringify(gameUsersIds)}.`,
