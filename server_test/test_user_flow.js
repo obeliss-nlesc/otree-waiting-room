@@ -24,15 +24,3 @@ Object.values(virtUsers).forEach((vu) => {
     vu.attemptQueueFlow(true)
   })
 })
-
-// setInterval(() => {
-//   const ids = Object.values(virtUsers).filter(vu => {
-//     if (vu.state == "redirected"){
-//       return true
-//     }
-//   })
-//
-//   console.log(`no of redirected users: ${ids.length}`)
-//   console.log(ids)
-//
-// }, 5000)

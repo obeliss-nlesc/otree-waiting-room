@@ -617,12 +617,12 @@ async function main() {
       // }
       if (user.state === "waitAgreement") {
         // User is waiting in an agreement
-        console.log(`${userId} in state ${user.state}.`)
+        // console.log(`${userId} in state ${user.state}.`)
         return
       }
       if (user.state === "agreed") {
         // User is waiting in an agreement
-        console.log(`${userId} in state ${user.state}.`)
+        // console.log(`${userId} in state ${user.state}.`)
         return
       }
       if (user.state === "inoTreePages") {
@@ -630,7 +630,7 @@ async function main() {
         socket.emit("gameStart", { room: user.redirectedUrl.toString() })
         return
       }
-      console.log(`${userId} in state ${user.state}.`)
+      // console.log(`${userId} in state ${user.state}.`)
 
       // console.log(`NEw user: ${user.userId} ${user.state}`)
       user.addListenerForState("queued", async (user, state) => {
