@@ -298,6 +298,7 @@ function startReadyGames(experiments, agreementIds, usersDb) {
           gameUsersIds,
           conditionObject.users.map((u) => u.redirectedUrl),
           conditionObject.server,
+          experiment.agreementTimeout,
         )
         console.log(
           `New agreement: ${agreement.agreementId} ${JSON.stringify(gameUsersIds)}.`,
@@ -395,6 +396,7 @@ async function main() {
       if (!SchedulerPlugins.classExists(e.scheduler.type)) {
         throw new Error(`Class ${e.scheduler.type} not found!`)
       }
+      experiments[e.name]["agreementTimeout"] = e.agreementTimeout
       // Instantiate a scheduler class and pass the queue to
       // be managed by the scheduler
       experiments[e.name]["scheduler"] = new (SchedulerPlugins.getClass(
@@ -615,10 +617,12 @@ async function main() {
       // }
       if (user.state === "waitAgreement") {
         // User is waiting in an agreement
+        // console.log(`${userId} in state ${user.state}.`)
         return
       }
       if (user.state === "agreed") {
         // User is waiting in an agreement
+        // console.log(`${userId} in state ${user.state}.`)
         return
       }
       if (user.state === "inoTreePages") {
@@ -626,6 +630,7 @@ async function main() {
         socket.emit("gameStart", { room: user.redirectedUrl.toString() })
         return
       }
+      // console.log(`${userId} in state ${user.state}.`)
 
       // console.log(`NEw user: ${user.userId} ${user.state}`)
       user.addListenerForState("queued", async (user, state) => {

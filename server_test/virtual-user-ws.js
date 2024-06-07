@@ -16,8 +16,14 @@ class VirtualUser {
       this.socket = io(this.serverUrl)
       this.socket.on("connect", () => {
         this.flag = 0
-        // console.log(`[${this.userId}] connected to ${this.serverUrl}`)
+        // console.log(`[${this.userId}] connected.`)
+        this.state = "connected"
         resolve()
+      })
+      this.socket.on("connect_error", (err) => {
+        // console.log(`[${this.userId}] error connection.`)
+        this.sate = "error"
+        // reject(err)
       })
     })
   }
@@ -30,10 +36,12 @@ class VirtualUser {
       return
     }
     this.socket.on("wait", (data) => {
+      // console.log(`[${this.userId}] received wait.`)
       this.flag = 0
       this.state = "queued"
     })
     this.socket.on("queueUpdate", (data) => {
+      // console.log(`[${this.userId}] received queueUpdate.`)
       this.flag = 0
       // Nothing to do
     })
@@ -55,29 +63,40 @@ class VirtualUser {
     if (this.state == "redirected") {
       return
     }
-    // console.log(`${this.userId} emmiting landingPage`)
     this.socket.emit("landingPage", {
       experimentId: this.experimentId,
       userId: this.userId,
     })
-    // console.log(`${this.userId} emmiting newUser`)
     this.socket.emit("newUser", {
       experimentId: this.experimentId,
       userId: this.userId,
     })
-    const that = this
+
     const intervatl = setInterval(() => {
-      if (that.state == "redirected" || !that.socket) {
+      // If user is stuck (server overload) restart flow
+      if (this.state == "connected" || this.state == "error") {
+        this.socket.close()
+        clearInterval(intervatl)
+        // console.log(`[${this.userId}] reconnecting.`)
+        this.socket = io(this.serverUrl)
+        this.attemptQueueFlow(true)
+        return
+      }
+      // If redirected clear interval and quit user flow
+      if (this.state == "redirected" || !this.socket) {
         clearInterval(intervatl)
         return
       }
-      if (that.flag > 0) {
-        that.socket.emit("newUser", {
-          experimentId: that.experimentId,
-          userId: that.userId,
+      // Poke server to force requeue if for some reason user
+      // dropped out of queue
+      if (this.flag > 0) {
+        this.socket.emit("newUser", {
+          experimentId: this.experimentId,
+          userId: this.userId,
         })
       } else {
-        that.flag += 1
+        // console.log(`[${this.userId}] in stuck interval.`)
+        this.flag += 1
       }
     }, 5000)
   }
@@ -85,7 +104,6 @@ class VirtualUser {
   #flipCoin() {
     // Generate a random number between 0 and 1
     const randomNumber = Math.random()
-    // Return "Heads" if the number is less than 0.5, otherwise return "Tails"
     return randomNumber < 0.5
   }
 
@@ -93,14 +111,14 @@ class VirtualUser {
     this.#setupSocketEvents()
 
     this.socket.on("agree", (data) => {
+      // console.log(`[${this.userId}] received agree.`)
       this.flag = 0
+      // Choose to agree or not
       if (random && this.#flipCoin()) {
-        // console.log(`${this.userId} ignoring agreement`)
+        // do not agree and wait for timeout
         return
       }
-      // console.log(`${this.userId} accepting agreement`)
       const uuid = data.uuid
-      // Choose to agree or not
       this.socket.emit("userAgreed", {
         experimentId: this.experimentId,
         userId: this.userId,
@@ -110,9 +128,9 @@ class VirtualUser {
     })
 
     this.socket.on("reset", (data) => {
+      // console.log(`[${this.userId}] received reset.`)
       this.flag = 0
       this.state = "startedPage"
-      // console.log(`${this.userId} emmiting newUser`)
       this.socket.emit("newUser", {
         experimentId: this.experimentId,
         userId: this.userId,
