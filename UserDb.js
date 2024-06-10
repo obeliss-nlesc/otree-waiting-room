@@ -12,7 +12,6 @@ class UserDb extends Map {
     this.file = file
     this.lastHash = 0
     this.writeCounter = 0
-    this.forcedSave = 0
   }
   load() {
     let data = []
@@ -75,10 +74,6 @@ class UserDb extends Map {
     }, 500)
   }
   forceSave() {
-    if (this.forcedSave > 0) {
-      return
-    }
-    this.forcedSave = 1
     const data = []
     this.forEach((v, k) => {
       data.push(v.serialize())

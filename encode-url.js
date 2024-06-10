@@ -25,18 +25,20 @@ if (!secretKey) {
   console.log("[ERROR] no secret key")
   return
 }
-function getYmdDate() {
-  const now = new Date()
+function getYmdDate(now) {
+  // const now = new Date()
   let month = ("0" + (now.getMonth() + 1)).slice(-2)
   let day = ("0" + now.getDate()).slice(-2)
   return `${now.getFullYear()}${month}${day}`
 }
-const now = getYmdDate()
+const today = getYmdDate(new Date())
+const yesterday = getYmdDate(new Date(Date.now() - 86400000))
+const date = today
 hosts.forEach((host) => {
   experimentIds.forEach((experimentId) => {
-    console.log(`URLS for experiment: ${experimentId}`)
+    console.log(`URLS for experiment: ${experimentId} with date: ${date}.`)
     users.forEach((u) => {
-      const dataToSign = `${u}:${now}:${experimentId}`
+      const dataToSign = `${u}:${date}:${experimentId}`
       const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
       const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
       console.log(

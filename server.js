@@ -55,8 +55,12 @@ if (options.resetDb && fs.existsSync(userDbFile)) {
  * @type {Map<`${userId}:${experimentId}`, User>}
  */
 const usersDb = new UserDb(userDbFile)
-
+let shuttingDown = 0
 process.on("SIGINT", async () => {
+  if (shuttingDown > 0) {
+    return
+  }
+  shuttingDown = 1
   console.log("\nGracefully shutting down from SIGINT (Ctrl-C)")
   await usersDb.forceSave()
   setTimeout(() => {
@@ -162,30 +166,47 @@ const validateSignature = (req, res, next) => {
 
 // Middleware to validate signature
 const validateHmac = (req, res, next) => {
-  function getYmdDate() {
-    const now = new Date()
+  function getYmdDate(now) {
+    // const now = new Date()
     let month = ("0" + (now.getMonth() + 1)).slice(-2)
     let day = ("0" + now.getDate()).slice(-2)
     return `${now.getFullYear()}${month}${day}`
   }
-  const today = getYmdDate()
+
+  function getHexSignature(dataToSign, secretKey) {
+    const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+    return CryptoJS.enc.Hex.stringify(signatureWordArray)
+  }
+
+  const today = getYmdDate(new Date())
+  const yesterday = getYmdDate(new Date(Date.now() - 86400000))
+
+  // console.log(`today: ${today}, yesterday: ${yesterday}.`)
 
   const respondent = req.query.respondent
   const check = req.query.check
   const experimentId = req.params.experimentId || ""
 
-  const dataToSign = `${respondent}:${today}:${experimentId}`
-  const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
-  const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
+  // let dataToSign = `${respondent}:${today}:${experimentId}`
+  // const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+  // const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
+  todaySignature = getHexSignature(
+    `${respondent}:${today}:${experimentId}`,
+    secretKey,
+  )
+  yesterdaySignature = getHexSignature(
+    `${respondent}:${yesterday}:${experimentId}`,
+    secretKey,
+  )
 
-  if (signatureHex === check) {
+  if (todaySignature === check || yesterdaySignature === check) {
     req.user = {
       userId: respondent,
       oTreeVars: {},
     }
     next()
   } else {
-    res.status(401).json({ message: "Unauthorized: Invalid signature" })
+    res.status(401).json({ message: "Unauthorized: invalid signature" })
   }
 }
 
