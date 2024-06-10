@@ -190,11 +190,16 @@ const validateHmac = (req, res, next) => {
   // let dataToSign = `${respondent}:${today}:${experimentId}`
   // const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
   // const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
-  todaySignature = getHexSignature(`${respondent}:${today}:${experimentId}`, secretKey)
-  yesterdaySignature = getHexSignature(`${respondent}:${yesterday}:${experimentId}`, secretKey)
-  
+  todaySignature = getHexSignature(
+    `${respondent}:${today}:${experimentId}`,
+    secretKey,
+  )
+  yesterdaySignature = getHexSignature(
+    `${respondent}:${yesterday}:${experimentId}`,
+    secretKey,
+  )
 
-  if ( (todaySignature === check) || (yesterdaySignature === check) ) {
+  if (todaySignature === check || yesterdaySignature === check) {
     req.user = {
       userId: respondent,
       oTreeVars: {},
