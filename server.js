@@ -37,7 +37,9 @@ program
 
 program.parse(process.argv)
 const options = program.opts()
-const config = (options.config) ? require(options.config) : require("./config.json")
+const config = options.config
+  ? require(options.config)
+  : require("./config.json")
 
 const port = options.port || "8060"
 const userDbFile = options.dbFile || "./data/userdb.json"
