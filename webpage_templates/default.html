@@ -61,7 +61,7 @@
       </div>
       <div id="errorDiv" class="w3-center w3-margin">
         <div class="w3-container w3-border w3-large w3-margin">
-        <p>An error has occurred.</p>
+          <p>An error has occurred.</p>
         </div>
       </div>
       <div id="agreeDiv" class="w3-hide w3-center w3-margin">
@@ -111,7 +111,7 @@
         hideDiv("tableDiv")
         hideDiv("waitDiv")
         hideDiv("agreeDiv")
-	      hideDiv("errorDiv")
+        hideDiv("errorDiv")
 
         showDiv("loaderDiv")
       })
@@ -156,7 +156,7 @@
         socket.emit("landingPage", {
           experimentId: experimentId,
           userId: userId,
-          token: token
+          token: token,
         })
         myState = "startedPage"
         console.log("Connected to server")
@@ -166,7 +166,7 @@
         socket.emit("newUser", {
           experimentId: experimentId,
           userId: userId,
-          token: token
+          token: token,
         })
       })
 
@@ -180,7 +180,7 @@
         hideDiv("startDiv")
         hideDiv("tableDiv")
         hideDiv("agreeDiv")
-	      hideDiv("errorDiv")
+        hideDiv("errorDiv")
         hideDiv("timerBox")
         hideDiv("loaderDiv")
         showDiv("waitDiv")
@@ -193,7 +193,7 @@
         hideDiv("agreeDiv")
         hideDiv("timerBox")
         hideDiv("loaderDiv")
-	      hideDiv("errorDiv")
+        hideDiv("errorDiv")
         hideDiv("waitDiv")
         showDiv("startDiv")
         showDiv("tableDiv")
@@ -228,7 +228,7 @@
         console.log("[SOCKET][agree] ", data)
         hideDiv("startDiv")
         hideDiv("tableDiv")
-	      hideDiv("errorDiv")
+        hideDiv("errorDiv")
         hideDiv("waitDiv")
         showDiv("agreeDiv")
         setTimerAndShow("timerBox", data.timeout)

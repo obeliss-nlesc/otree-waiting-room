@@ -203,7 +203,7 @@ function _validateHmac(token, userId, experimentId) {
 
   if (todaySignature === check || yesterdaySignature === check) {
     return true
-  } 
+  }
   return false
 }
 // Middleware to validate signature
@@ -242,7 +242,13 @@ const validateHmac = (req, res, next) => {
   // )
   //
   // if (todaySignature === check || yesterdaySignature === check) {
-  if (_validateHmac(req.query.check, req.query.respondent, req.params.experimentId)) {
+  if (
+    _validateHmac(
+      req.query.check,
+      req.query.respondent,
+      req.params.experimentId,
+    )
+  ) {
     req.user = {
       userId: req.query.respondent,
       token: req.query.check,
