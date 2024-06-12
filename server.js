@@ -640,11 +640,14 @@ async function main() {
     socket.on("landingPage", async (msg) => {
       const userId = msg.userId
       const experimentId = msg.experimentId
+      if (!_validateHmac(msg.token, userId, experimentId)) {
+        console.log(`User ${userId} invalid token ${msg.token}.`)
+        socket.emit("error", {})
+        return
+      }
       const compoundKey = `${userId}:${experimentId}`
       const user = usersDb.get(compoundKey) || new User(userId, experimentId)
       user.webSocket = socket
-      const vToken = _validateHmac(msg.token, userId, experimentId)
-      console.log(`token: ${msg.token}. valid: ${vToken}.`)
 
       // If user is queued and refreshes page then re-trigger
       // queued events.
@@ -672,6 +675,11 @@ async function main() {
     socket.on("newUser", async (msg) => {
       let userId = msg.userId
       const experimentId = msg.experimentId
+      if (!_validateHmac(msg.token, userId, experimentId)) {
+        console.log(`User ${userId} invalid token ${msg.token}.`)
+        socket.emit("error", {})
+        return
+      }
       const compoundKey = `${userId}:${experimentId}`
       let user = usersDb.get(compoundKey)
 
