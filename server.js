@@ -168,8 +168,7 @@ const validateSignature = (req, res, next) => {
   }
 }
 
-// Middleware to validate signature
-const validateHmac = (req, res, next) => {
+function _validateHmac(token, userId, experimentId) {
   function getYmdDate(now) {
     // const now = new Date()
     let month = ("0" + (now.getMonth() + 1)).slice(-2)
@@ -187,9 +186,8 @@ const validateHmac = (req, res, next) => {
 
   // console.log(`today: ${today}, yesterday: ${yesterday}.`)
 
-  const respondent = req.query.respondent
-  const check = req.query.check
-  const experimentId = req.params.experimentId || ""
+  const respondent = userId
+  const check = token
 
   // let dataToSign = `${respondent}:${today}:${experimentId}`
   // const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
@@ -204,8 +202,50 @@ const validateHmac = (req, res, next) => {
   )
 
   if (todaySignature === check || yesterdaySignature === check) {
+    return true
+  } 
+  return false
+}
+// Middleware to validate signature
+const validateHmac = (req, res, next) => {
+  // function getYmdDate(now) {
+  //   // const now = new Date()
+  //   let month = ("0" + (now.getMonth() + 1)).slice(-2)
+  //   let day = ("0" + now.getDate()).slice(-2)
+  //   return `${now.getFullYear()}${month}${day}`
+  // }
+  //
+  // function getHexSignature(dataToSign, secretKey) {
+  //   const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+  //   return CryptoJS.enc.Hex.stringify(signatureWordArray)
+  // }
+  //
+  // const today = getYmdDate(new Date())
+  // const yesterday = getYmdDate(new Date(Date.now() - 86400000))
+  //
+  // // console.log(`today: ${today}, yesterday: ${yesterday}.`)
+  //
+  // const respondent = req.query.respondent
+  // const check = req.query.check
+  // const experimentId = req.params.experimentId || ""
+  //
+  // // let dataToSign = `${respondent}:${today}:${experimentId}`
+  // // const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+  // // const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
+  // todaySignature = getHexSignature(
+  //   `${respondent}:${today}:${experimentId}`,
+  //   secretKey,
+  // )
+  // yesterdaySignature = getHexSignature(
+  //   `${respondent}:${yesterday}:${experimentId}`,
+  //   secretKey,
+  // )
+  //
+  // if (todaySignature === check || yesterdaySignature === check) {
+  if (_validateHmac(req.query.check, req.query.respondent, req.params.experimentId)) {
     req.user = {
-      userId: respondent,
+      userId: req.query.respondent,
+      token: req.query.check,
       oTreeVars: {},
     }
     next()
@@ -577,6 +617,8 @@ async function main() {
     const user =
       usersDb.get(compoundKey) || new User(userId, params.experimentId)
     user.tokenParams = params
+    params.token = req.user.token
+    //user.token = req.user.token
     usersDb.set(compoundKey, user)
     //console.log(`Token params: ${JSON.stringify(user.tokenParams)}`)
     if (
@@ -601,6 +643,9 @@ async function main() {
       const compoundKey = `${userId}:${experimentId}`
       const user = usersDb.get(compoundKey) || new User(userId, experimentId)
       user.webSocket = socket
+      const vToken = _validateHmac(msg.token, userId, experimentId)
+      console.log(`token: ${msg.token}. valid: ${vToken}.`)
+
       // If user is queued and refreshes page then re-trigger
       // queued events.
       switch (user.state) {

@@ -88,6 +88,7 @@
     <script>
       const experimentId = "<%= experimentId %>"
       const userId = "<%= userId %>"
+      const token = "<%= token%>"
       let uuid = null
       let myState = "new"
       // Connect to the WebSocket server
@@ -148,6 +149,7 @@
         socket.emit("landingPage", {
           experimentId: experimentId,
           userId: userId,
+          token: token
         })
         myState = "startedPage"
         console.log("Connected to server")
@@ -157,6 +159,7 @@
         socket.emit("newUser", {
           experimentId: experimentId,
           userId: userId,
+          token: token
         })
       })
 
