@@ -790,6 +790,9 @@ async function main() {
    */
   function startGame(users, urls, experimentId, agreementId) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`)
+    // Set copyVars to true if you want to send variables to oTree before redirect
+    // e.g. lobby_id
+    const copyVars = true
     for (let i = 0; i < users.length; i++) {
       const userId = users[i]
       // const compoundKey = `${userId}:${experimentId}`
@@ -801,56 +804,45 @@ async function main() {
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
       const oTreeVars = user.tokenParams?.oTreeVars || {}
-      oTreeVars['lobby_id'] = agreementId
-      // First update user variables on oTree server
-      // then redirect
-      const config = {
-        headers: {
-          "otree-rest-key": otreeRestKey,
-        },
+      oTreeVars["lobby_id"] = agreementId
+      function redirect() {
+        const sock = user.webSocket
+        // Emit a custom event with the game room URL
+        user.experimentUrl = expUrl
+        user.groupId = agreementId
+        user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+        user.changeState("inoTreePages")
+        sock.emit("gameStart", { room: user.redirectedUrl })
+        console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
       }
-      const participantCode = expUrl.pathname.split("/").pop()
-      // const sock = user.webSocket
-      // Emit a custom event with the game room URL
-      // user.experimentUrl = expUrl
-      // user.groupId = agreementId
-      // user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-      // user.changeState("inoTreePages")
-      // sock.emit("gameStart", { room: user.redirectedUrl })
-      // console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
-
-      //We do not need to update vars on oTree anymore since they are not coming
-      //through the url encoding
-      //
-      const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
-      axios
-        .post(apiUrl, { vars: oTreeVars }, config)
-        .then((_) => {
-          console.log(
-            `Updated ${userId} vars for participant ${participantCode} with ${JSON.stringify(oTreeVars)}`,
-          )
-          const sock = user.webSocket
-          // Emit a custom event with the game room URL
-          user.experimentUrl = expUrl
-          user.groupId = agreementId
-          user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-          user.changeState("inoTreePages")
-          sock.emit("gameStart", { room: user.redirectedUrl })
-          console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
-          // const sock = user.webSocket
-          // // Emit a custom event with the game room URL
-          // user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-          // sock.emit("gameStart", { room: user.redirectedUrl })
-          // user.changeState("inoTreePages")
-          // console.log(
-          //   `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
-          // )
-        })
-        .catch((_) => {
-          console.log(
-            `Error updating ${userId} vars for participant ${participantCode}.`,
-          )
-        })
+      if (!copyVars) {
+        //We do not need to update vars on oTree anymore since they are not coming
+        //through the url encoding
+        redirect()
+      } else {
+        // First update user variables on oTree server
+        // then redirect
+        const config = {
+          headers: {
+            "otree-rest-key": otreeRestKey,
+          },
+        }
+        const participantCode = expUrl.pathname.split("/").pop()
+        const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
+        axios
+          .post(apiUrl, { vars: oTreeVars }, config)
+          .then((_) => {
+            console.log(
+              `Updated ${userId} vars for participant ${participantCode} with ${JSON.stringify(oTreeVars)}`,
+            )
+            redirect()
+          })
+          .catch((_) => {
+            console.log(
+              `Error updating ${userId} vars for participant ${participantCode}.`,
+            )
+          })
+      } // copyVars
     }
     // Save users to file with the new redirected urls
     usersDb.save()
