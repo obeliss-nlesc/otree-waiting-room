@@ -59,6 +59,11 @@
         </button>
         <p>Click START to enter the waiting room</p>
       </div>
+      <div id="errorDiv" class="w3-center w3-margin">
+        <div class="w3-container w3-border w3-large w3-margin">
+          <p>An error has occurred.</p>
+        </div>
+      </div>
       <div id="agreeDiv" class="w3-hide w3-center w3-margin">
         <p>
           There are enough player to start. Click on "AGREE" to start playing.
@@ -88,6 +93,7 @@
     <script>
       const experimentId = "<%= experimentId %>"
       const userId = "<%= userId %>"
+      const token = "<%= token%>"
       let uuid = null
       let myState = "new"
       // Connect to the WebSocket server
@@ -105,6 +111,7 @@
         hideDiv("tableDiv")
         hideDiv("waitDiv")
         hideDiv("agreeDiv")
+        hideDiv("errorDiv")
         showDiv("loaderDiv")
       })
       function setTimerAndShow(id, timeSeconds) {
@@ -148,6 +155,7 @@
         socket.emit("landingPage", {
           experimentId: experimentId,
           userId: userId,
+          token: token,
         })
         myState = "startedPage"
         console.log("Connected to server")
@@ -157,6 +165,7 @@
         socket.emit("newUser", {
           experimentId: experimentId,
           userId: userId,
+          token: token,
         })
       })
 
@@ -170,6 +179,7 @@
         hideDiv("startDiv")
         hideDiv("tableDiv")
         hideDiv("agreeDiv")
+        hideDiv("errorDiv")
         hideDiv("timerBox")
         hideDiv("loaderDiv")
         showDiv("waitDiv")
@@ -182,11 +192,25 @@
         hideDiv("agreeDiv")
         hideDiv("timerBox")
         hideDiv("loaderDiv")
+        hideDiv("errorDiv")
         hideDiv("waitDiv")
         showDiv("startDiv")
         showDiv("tableDiv")
         uuid = null
         myState = "startedPage"
+      })
+
+      socket.on("error", (data) => {
+        console.log("[SOCKET][error] ", data)
+        hideDiv("agreeDiv")
+        hideDiv("timerBox")
+        hideDiv("loaderDiv")
+        showDiv("errorDiv")
+        hideDiv("waitDiv")
+        hideDiv("startDiv")
+        hideDiv("tableDiv")
+        uuid = null
+        myState = "error"
       })
 
       // Update from server about the number of waiting players
@@ -203,6 +227,7 @@
         console.log("[SOCKET][agree] ", data)
         hideDiv("startDiv")
         hideDiv("tableDiv")
+        hideDiv("errorDiv")
         hideDiv("waitDiv")
         showDiv("agreeDiv")
         setTimerAndShow("timerBox", data.timeout)
