@@ -1,6 +1,6 @@
 const VirtualUser = require("./virtual-user-ws")
 const fs = require("fs")
-const http = require('http');
+const http = require("http")
 
 function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min) + min)
@@ -28,31 +28,27 @@ function runTest() {
   })
 }
 
-
 const options = {
-  hostname: 'localhost',
+  hostname: "localhost",
   port: 8060,
-  path: '/',
-  method: 'GET'
-};
+  path: "/",
+  method: "GET",
+}
 
 const req = http.request(options, (res) => {
   if (res.statusCode > 0) {
-    console.log('Server is up and running.');
+    console.log("Server is up and running.")
     runTest()
-  } 
+  }
 
-  res.on('data', (chunk) => {
-  });
+  res.on("data", (chunk) => {})
 
-  res.on('end', () => {
-  });
-});
+  res.on("end", () => {})
+})
 
-req.on('error', (e) => {
-  console.log('Server is down or not reachable.');
+req.on("error", (e) => {
+  console.log("Server is down or not reachable.")
   console.log('Start server with command e.g. "npm run dev".')
-});
+})
 
-req.end();
-
+req.end()

@@ -15,17 +15,17 @@ class VirtualUser {
     this.flag = 0
   }
   #createToken() {
-      function getYmdDate(now) {
-        // const now = new Date()
-        let month = ("0" + (now.getMonth() + 1)).slice(-2)
-        let day = ("0" + now.getDate()).slice(-2)
-        return `${now.getFullYear()}${month}${day}`
-      }
-      const today = getYmdDate(new Date())
-      const dataToSign = `${this.userId}:${today}:${this.experimentId}`
-      const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
-      const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
-      return signatureHex
+    function getYmdDate(now) {
+      // const now = new Date()
+      let month = ("0" + (now.getMonth() + 1)).slice(-2)
+      let day = ("0" + now.getDate()).slice(-2)
+      return `${now.getFullYear()}${month}${day}`
+    }
+    const today = getYmdDate(new Date())
+    const dataToSign = `${this.userId}:${today}:${this.experimentId}`
+    const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+    const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
+    return signatureHex
   }
   connect(serverUrl) {
     return new Promise((resolve, reject) => {
@@ -83,12 +83,12 @@ class VirtualUser {
     this.socket.emit("landingPage", {
       experimentId: this.experimentId,
       userId: this.userId,
-      token: this.token
+      token: this.token,
     })
     this.socket.emit("newUser", {
       experimentId: this.experimentId,
       userId: this.userId,
-      token: this.token
+      token: this.token,
     })
 
     const intervatl = setInterval(() => {
@@ -112,7 +112,7 @@ class VirtualUser {
         this.socket.emit("newUser", {
           experimentId: this.experimentId,
           userId: this.userId,
-          token: this.token
+          token: this.token,
         })
       } else {
         // console.log(`[${this.userId}] in stuck interval.`)
@@ -154,7 +154,7 @@ class VirtualUser {
       this.socket.emit("newUser", {
         experimentId: this.experimentId,
         userId: this.userId,
-        token: this.token
+        token: this.token,
       })
     })
     this.#goToLandingPage()
