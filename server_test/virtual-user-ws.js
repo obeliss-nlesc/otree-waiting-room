@@ -63,8 +63,7 @@ class VirtualUser {
       // Nothing to do
     })
 
-    this.socket.on("error", () => {
-    })
+    this.socket.on("error", () => {})
 
     this.socket.on("gameStart", (data) => {
       this.flag = 0
@@ -101,7 +100,7 @@ class VirtualUser {
       if (this.state == "connected" || this.state == "error") {
         try {
           this.socket.close()
-        } catch(err) {
+        } catch (err) {
           console.log(`[${this.userId}] error closing socket.`)
         }
         clearInterval(intervatl)
