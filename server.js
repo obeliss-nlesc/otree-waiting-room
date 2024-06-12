@@ -18,7 +18,7 @@ const User = require("./user.js")
 const Agreement = require("./agreement.js")
 // const classLoader = require('./class_loader.js')
 const ClassLoader = require("./class_loader.js")
-const config = require("./config.json")
+// const config = require("./config.json")
 const { userInfo } = require("os")
 const UserDb = require("./UserDb.js")
 
@@ -30,12 +30,16 @@ const secretKey = process.env.SECRET_KEY
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 
 program
-  .option("-p, --port <int>", "server listen port")
-  .option("--reset-db", "reset users database")
-  .option("--db-file <type>", "user database file to use")
+  .option("-p, --port <int>", "server listen port.")
+  .option("-c, --config <type>", "config file path.")
+  .option("--reset-db", "reset users database.")
+  .option("--db-file <type>", "user database file to use.")
 
 program.parse(process.argv)
 const options = program.opts()
+const config = options.config
+  ? require(options.config)
+  : require("./config.json")
 
 const port = options.port || "8060"
 const userDbFile = options.dbFile || "./data/userdb.json"
