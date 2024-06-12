@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "node --test",
+    "test-load": "node server_test/test_user_flow.js",
     "dev": "node set_env.js > .env && node server.js -p 8060",
     "dev-newDb": "node server.js -p 8060 --reset-db",
     "start": "node server.js 80"
