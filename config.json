@@ -13,7 +13,7 @@
     {
       "name": "public_goods_game",
       "enabled": true,
-      "agreementTimeout": 1,
+      "agreementTimeout": 10,
       "scheduler": {
         "type": "GatScheduler",
         "params": {

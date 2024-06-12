@@ -800,48 +800,57 @@ async function main() {
       // Set user variables on oTree server
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
-      // const oTreeVars = user.tokenParams?.oTreeVars || {}
+      const oTreeVars = user.tokenParams?.oTreeVars || {}
+      oTreeVars['lobby_id'] = agreementId
       // First update user variables on oTree server
       // then redirect
-      // const config = {
-      //   headers: {
-      //     "otree-rest-key": otreeRestKey,
-      //   },
-      // }
-      //const participantCode = expUrl.pathname.split("/").pop()
-      const sock = user.webSocket
+      const config = {
+        headers: {
+          "otree-rest-key": otreeRestKey,
+        },
+      }
+      const participantCode = expUrl.pathname.split("/").pop()
+      // const sock = user.webSocket
       // Emit a custom event with the game room URL
-      user.experimentUrl = expUrl
-      user.groupId = agreementId
-      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-      user.changeState("inoTreePages")
-      sock.emit("gameStart", { room: user.redirectedUrl })
+      // user.experimentUrl = expUrl
+      // user.groupId = agreementId
+      // user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+      // user.changeState("inoTreePages")
+      // sock.emit("gameStart", { room: user.redirectedUrl })
       // console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
 
       //We do not need to update vars on oTree anymore since they are not coming
       //through the url encoding
       //
-      // const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
-      // axios
-      //   .post(apiUrl, { vars: oTreeVars }, config)
-      //   .then((_) => {
-      //     console.log(
-      //       `Updated ${userId} vars for participant ${participantCode} with ${oTreeVars}`,
-      //     )
-      //     const sock = user.webSocket
-      //     // Emit a custom event with the game room URL
-      //     user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-      //     sock.emit("gameStart", { room: user.redirectedUrl })
-      //     user.changeState("inoTreePages")
-      //     console.log(
-      //       `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
-      //     )
-      //   })
-      //   .catch((_) => {
-      //     console.log(
-      //       `Error updating ${userId} vars for participant ${participantCode}.`,
-      //     )
-      //   })
+      const apiUrl = `http://${expUrl.host}/api/participant_vars/${participantCode}`
+      axios
+        .post(apiUrl, { vars: oTreeVars }, config)
+        .then((_) => {
+          console.log(
+            `Updated ${userId} vars for participant ${participantCode} with ${JSON.stringify(oTreeVars)}`,
+          )
+          const sock = user.webSocket
+          // Emit a custom event with the game room URL
+          user.experimentUrl = expUrl
+          user.groupId = agreementId
+          user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+          user.changeState("inoTreePages")
+          sock.emit("gameStart", { room: user.redirectedUrl })
+          console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
+          // const sock = user.webSocket
+          // // Emit a custom event with the game room URL
+          // user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+          // sock.emit("gameStart", { room: user.redirectedUrl })
+          // user.changeState("inoTreePages")
+          // console.log(
+          //   `Redirecting user ${user.userId} to ${user.redirectedUrl}`,
+          // )
+        })
+        .catch((_) => {
+          console.log(
+            `Error updating ${userId} vars for participant ${participantCode}.`,
+          )
+        })
     }
     // Save users to file with the new redirected urls
     usersDb.save()
