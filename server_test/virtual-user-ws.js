@@ -62,6 +62,9 @@ class VirtualUser {
       this.flag = 0
       // Nothing to do
     })
+
+    this.socket.on("error", () => {})
+
     this.socket.on("gameStart", (data) => {
       this.flag = 0
       console.log(`[${this.userId}] redirected to ${data.room}.`)
@@ -72,8 +75,8 @@ class VirtualUser {
     this.socket.on("disconnect", () => {
       this.flag = 0
       // console.log(`[${this.userId}] disconnected from ${this.serverUrl}`)
-      this.socket = null
-      this.state = "disconnected"
+      //this.socket = null
+      //this.state = "disconnected"
     })
   }
   #goToLandingPage() {
@@ -92,9 +95,14 @@ class VirtualUser {
     })
 
     const intervatl = setInterval(() => {
+      // console.log(`[${this.userId}] in interval in state ${this.state}.`)
       // If user is stuck (server overload) restart flow
       if (this.state == "connected" || this.state == "error") {
-        this.socket.close()
+        try {
+          this.socket.close()
+        } catch (err) {
+          console.log(`[${this.userId}] error closing socket.`)
+        }
         clearInterval(intervatl)
         // console.log(`[${this.userId}] reconnecting.`)
         this.socket = io(this.serverUrl)
