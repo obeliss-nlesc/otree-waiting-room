@@ -82,22 +82,22 @@ These details are defined in a config.json file. An example is given below:
 }
 ```
 
-In the above two experiments are setup. ``name`` is the oTree given name of the experiment.
-``enabled`` signals to the waiting-room to ignore and hence to not schedule the experiment.
-``agreementTimeout`` is the timeout shown on the AGREE webpage.
-``scheduler`` is what type of grouping scheduler to use. ``GatScheduler`` is the default 
+In the above two experiments are setup. `name` is the oTree given name of the experiment.
+`enabled` signals to the waiting-room to ignore and hence to not schedule the experiment.
+`agreementTimeout` is the timeout shown on the AGREE webpage.
+`scheduler` is what type of grouping scheduler to use. `GatScheduler` is the default
 Group by Arrival Time scheduler i.e. it will group people on a first come first serve bases.
-``params`` are the scheduler specific parameters. In this case the GatScheduler only takes 1 parameter:
-``min`` the number of people to group. Save this file as as a json file e.g. ``config.json``
+`params` are the scheduler specific parameters. In this case the GatScheduler only takes 1 parameter:
+`min` the number of people to group. Save this file as as a json file e.g. `config.json`
 
 ## File database
 
-By default the waiting room will save user details in a json file database ``data/userdb.json``. 
-A different file can be passed as a parameter using ``--db-file`` option when starting the server. 
-The database stores the used urls i.e. urls that have alreaddy been used by a user. 
+By default the waiting room will save user details in a json file database `data/userdb.json`.
+A different file can be passed as a parameter using `--db-file` option when starting the server.
+The database stores the used urls i.e. urls that have alreaddy been used by a user.
 On restarting the server waiting room, these urls are removed from the list of available urls so that
-you would not redirect two or more users to the same url. To reset the database either delete the file 
-while the server is down or start the server with ``--reset-db`` flag.
+you would not redirect two or more users to the same url. To reset the database either delete the file
+while the server is down or start the server with `--reset-db` flag.
 
 ## Start waiting room
 
@@ -108,7 +108,7 @@ node server.js --port 8080 --config [PATH TO CONFIG.JSON]
 ```
 
 A database is created by default in ./data/userdb.json which will save previous redirected urls. To reset the database
-start the server with --reset-db flag. 
+start the server with --reset-db flag.
 
 ## Generate test URLs
 
