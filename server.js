@@ -649,7 +649,7 @@ async function main() {
       if (!_validateHmac(msg.token, userId, experimentId)) {
         console.log(`User ${userId} invalid token ${msg.token}.`)
         socket.emit("tokenError", {
-          errorMsg: "Token invalid!"
+          errorMsg: "Token invalid!",
         })
         return
       }
@@ -686,7 +686,7 @@ async function main() {
       if (!_validateHmac(msg.token, userId, experimentId)) {
         console.log(`User ${userId} invalid token ${msg.token}.`)
         socket.emit("tokenError", {
-          errorMsg: "Token invalid!"
+          errorMsg: "Token invalid!",
         })
         return
       }
