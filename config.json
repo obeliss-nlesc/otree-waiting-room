@@ -12,8 +12,19 @@
     },
     {
       "name": "public_goods_game",
+      "enabled": false,
+      "agreementTimeout": 0,
+      "scheduler": {
+        "type": "GatScheduler",
+        "params": {
+          "min": "3"
+        }
+      }
+    },
+    {
+      "name": "DropOutTest",
       "enabled": true,
-      "agreementTimeout": 1,
+      "agreementTimeout": 10,
       "scheduler": {
         "type": "GatScheduler",
         "params": {
