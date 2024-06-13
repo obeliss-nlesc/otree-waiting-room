@@ -124,8 +124,14 @@ To manage the server with pm2, first install pm2
 
 ```shell
 npm install pm2 -g
-pm2 start server.js -- --port 8080
+pm2 start server.js -- --port 8080 --config [PATH TO CONFIG.JSON FILE]
 pm2 list
+```
+
+To restart the server
+
+```shell
+pm2 restart server
 ```
 
 ## API documentation
