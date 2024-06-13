@@ -59,9 +59,9 @@
         </button>
         <p>Click START to enter the waiting room</p>
       </div>
-      <div id="errorDiv" class="w3-center w3-margin">
+      <div id="errorDiv" class="w3-center w3-margin w3-hide">
         <div class="w3-container w3-border w3-large w3-margin">
-          <p>An error has occurred.</p>
+          <p>An error has occurred: <span id=errorMsg></span></p>
         </div>
       </div>
       <div id="agreeDiv" class="w3-hide w3-center w3-margin">
@@ -200,15 +200,16 @@
         myState = "startedPage"
       })
 
-      socket.on("error", (data) => {
+      socket.on("tokenError", (data) => {
         console.log("[SOCKET][error] ", data)
+        document.getElementById("errorMsg").innerText = data.errorMsg
         hideDiv("agreeDiv")
         hideDiv("timerBox")
         hideDiv("loaderDiv")
-        showDiv("errorDiv")
         hideDiv("waitDiv")
         hideDiv("startDiv")
         hideDiv("tableDiv")
+        showDiv("errorDiv")
         uuid = null
         myState = "error"
       })

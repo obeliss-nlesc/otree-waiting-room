@@ -648,7 +648,9 @@ async function main() {
       const experimentId = msg.experimentId
       if (!_validateHmac(msg.token, userId, experimentId)) {
         console.log(`User ${userId} invalid token ${msg.token}.`)
-        socket.emit("error", {})
+        socket.emit("tokenError", {
+          errorMsg: "Token invalid!"
+        })
         return
       }
       const compoundKey = `${userId}:${experimentId}`
@@ -683,7 +685,9 @@ async function main() {
       const experimentId = msg.experimentId
       if (!_validateHmac(msg.token, userId, experimentId)) {
         console.log(`User ${userId} invalid token ${msg.token}.`)
-        socket.emit("error", {})
+        socket.emit("tokenError", {
+          errorMsg: "Token invalid!"
+        })
         return
       }
       const compoundKey = `${userId}:${experimentId}`
