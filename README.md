@@ -49,6 +49,47 @@ SECRET_KEY="some secret in quotes"
 API_KEY="some other secret in quotes"
 ```
 
+## Setup experiments config.json file
+
+The Server needs to know some details of the oTree experiments being hosted on the servers.
+These details are defined in a config.json file. An example is given below:
+
+```json
+{
+  "experiments": [
+    {
+      "name": "guess_two_thirds",
+      "enabled": false,
+      "scheduler": {
+        "type": "GatScheduler",
+        "params": {
+          "min": "3"
+        }
+      }
+    },
+    {
+      "name": "public_goods_game",
+      "enabled": true,
+      "agreementTimeout": 10,
+      "scheduler": {
+        "type": "GatScheduler",
+        "params": {
+          "min": "3"
+        }
+      }
+    }
+  ]
+}
+```
+
+In the above two experiments are setup. ``name`` is the oTree given name of the experiment.
+``enabled`` signals to the waiting-room to ignore and hence to not schedule the experiment.
+``agreementTimeout`` is the timeout shown on the AGREE webpage.
+``scheduler`` is what type of grouping scheduler to use. ``GatScheduler`` is the defualt 
+Group by Arrival Time scheduler i.e. it will group people on a first come first serve bases.
+``params`` are the scheduler specific parameters. In this case the GatScheduler only takes 1 parameter:
+``min`` the number of people to group. 
+
 ## Start waiting room
 
 To start server on a default port 8060 localhost
