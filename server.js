@@ -593,7 +593,7 @@ async function main() {
     let users = []
 
     for (let i = 0; i < noOfUrls; i++) {
-      users.push((30000 + i)*-1)
+      users.push((30000 + i) * -1)
     }
 
     let htmlString = `<!doctype html><html><title>${experimentId} Urls</title><body>`
