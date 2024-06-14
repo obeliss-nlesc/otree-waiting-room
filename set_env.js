@@ -10,6 +10,7 @@ const postgresDb = "django_db"
 const otreeRestKey = "password"
 const apiKey = getKeyFromFile("./api.key") || generateApiKey()
 const secretKey = getKeyFromFile("./secret.key") || generateApiKey()
+const secretPass = getKeyFromFile("./pass.key") || generateApiKey()
 
 function generateApiKey() {
   return crypto.randomBytes(16).toString("hex")
@@ -89,6 +90,7 @@ getContainersInfo()
     console.log(`POSTGRES_PASSWORD=${postgresPass}`)
     console.log(`OTREE_REST_KEY=${otreeRestKey}`)
     console.log(`SECRET_KEY="${secretKey}"`)
+    console.log(`URL_PASS="${secretPass}"`)
     console.log(`API_KEY="${apiKey}"`)
   })
   .catch((error) => {
