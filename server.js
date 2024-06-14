@@ -27,6 +27,7 @@ const otreeIPs = process.env.OTREE_IPS.split(",")
 const otreeRestKey = process.env.OTREE_REST_KEY
 const apiKey = process.env.API_KEY
 const secretKey = process.env.SECRET_KEY
+const urlPass = process.env.URL_PASS
 const keyWordArray = CryptoJS.enc.Base64.parse(apiKey)
 
 program
@@ -168,18 +169,23 @@ const validateSignature = (req, res, next) => {
   }
 }
 
-function _validateHmac(token, userId, experimentId) {
-  function getYmdDate(now) {
-    // const now = new Date()
-    let month = ("0" + (now.getMonth() + 1)).slice(-2)
-    let day = ("0" + now.getDate()).slice(-2)
-    return `${now.getFullYear()}${month}${day}`
-  }
+function getYmdDate(now) {
+  // const now = new Date()
+  let month = ("0" + (now.getMonth() + 1)).slice(-2)
+  let day = ("0" + now.getDate()).slice(-2)
+  return `${now.getFullYear()}${month}${day}`
+}
 
-  function getHexSignature(dataToSign, secretKey) {
-    const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
-    return CryptoJS.enc.Hex.stringify(signatureWordArray)
-  }
+function getHexSignature(dataToSign, secretKey) {
+  const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+  return CryptoJS.enc.Hex.stringify(signatureWordArray)
+}
+
+function _validateHmac(token, userId, experimentId) {
+  // function getHexSignature(dataToSign, secretKey) {
+  //   const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
+  //   return CryptoJS.enc.Hex.stringify(signatureWordArray)
+  // }
 
   const today = getYmdDate(new Date())
   const yesterday = getYmdDate(new Date(Date.now() - 86400000))
@@ -206,42 +212,20 @@ function _validateHmac(token, userId, experimentId) {
   }
   return false
 }
+
+function validatePass(req, res, next) {
+  const pass = req.query.secret
+  const hash = CryptoJS.SHA256(pass).toString(CryptoJS.enc.Hex)
+  // console.log(`${hash} ${urlPass}`)
+  if (hash == urlPass) {
+    next()
+  } else {
+    res.status(401).json({ message: "Unauthorized: invalid signature" })
+  }
+}
+
 // Middleware to validate signature
 const validateHmac = (req, res, next) => {
-  // function getYmdDate(now) {
-  //   // const now = new Date()
-  //   let month = ("0" + (now.getMonth() + 1)).slice(-2)
-  //   let day = ("0" + now.getDate()).slice(-2)
-  //   return `${now.getFullYear()}${month}${day}`
-  // }
-  //
-  // function getHexSignature(dataToSign, secretKey) {
-  //   const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
-  //   return CryptoJS.enc.Hex.stringify(signatureWordArray)
-  // }
-  //
-  // const today = getYmdDate(new Date())
-  // const yesterday = getYmdDate(new Date(Date.now() - 86400000))
-  //
-  // // console.log(`today: ${today}, yesterday: ${yesterday}.`)
-  //
-  // const respondent = req.query.respondent
-  // const check = req.query.check
-  // const experimentId = req.params.experimentId || ""
-  //
-  // // let dataToSign = `${respondent}:${today}:${experimentId}`
-  // // const signatureWordArray = CryptoJS.HmacSHA256(dataToSign, secretKey)
-  // // const signatureHex = CryptoJS.enc.Hex.stringify(signatureWordArray)
-  // todaySignature = getHexSignature(
-  //   `${respondent}:${today}:${experimentId}`,
-  //   secretKey,
-  // )
-  // yesterdaySignature = getHexSignature(
-  //   `${respondent}:${yesterday}:${experimentId}`,
-  //   secretKey,
-  // )
-  //
-  // if (todaySignature === check || yesterdaySignature === check) {
   if (
     _validateHmac(
       req.query.check,
@@ -599,6 +583,34 @@ async function main() {
   app.get("/api/experiments", validateSignature, async (req, res) => {
     //console.log("HEADERS: ", req.headers)
     res.status(201).json(experiments)
+  })
+
+  app.get("/urls/:experimentId/:noOfUrls?", validatePass, async (req, res) => {
+    const today = getYmdDate(new Date())
+    const host = req.get("host")
+    const experimentId = req.params.experimentId
+    const noOfUrls = req.params.noOfUrls || 5
+    let users = []
+
+    for (let i = 0; i < noOfUrls; i++) {
+      users.push(30000 + i)
+    }
+
+    let htmlString = `<!doctype html><html><title>${experimentId} Urls</title><body>`
+    users
+      .map((u) => {
+        const token = getHexSignature(
+          `${u}:${today}:${experimentId}`,
+          secretKey,
+        )
+        return `http://${host}/room/${experimentId}?respondent=${u}&check=${token}`
+      })
+      .forEach((url) => {
+        htmlString += `<a href="${url}" target="_blank">${url}</a></br>`
+      })
+    htmlString += "</body></html>"
+
+    res.status(201).send(htmlString)
   })
 
   app.get("/room/:experimentId", validateHmac, async (req, res) => {
