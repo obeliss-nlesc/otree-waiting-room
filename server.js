@@ -80,6 +80,32 @@ function getOrSetValue(obj, key, defaultValue) {
   return obj[key]
 }
 
+function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipants) {
+  return new Promise((resolve, reject) => {
+    const config = {
+      headers: {
+        "otree-rest-key": otreeRestKey,
+      },
+    }
+    const payload = {
+      "session_config_name": sessionConfigName,
+      "num_participants": numParticipants
+    }
+    // const results = []
+    // Get a map of promises for every REST call to the servers
+    // then we can wait on all promises to resolve with Promise.all
+    const outerPromises = otreeIPs.map((s) => {
+      const apiUrl = `http://${s}/api/sessions`
+      //console.log(`Calling ${apiUrl}`)
+      return axios.post(apiUrl, payload, config).then(async (res) => {
+        console.log(res)
+      }).catch((err) => {
+        console.error(err)
+      })//axios
+    }) //outerPromises
+  })// Promise
+}
+
 function getOtreeUrls(otreeIPs, otreeRestKey) {
   return new Promise((resolve, reject) => {
     const config = {
@@ -106,6 +132,7 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
               const experimentUrl = `http://${s}/InitializeParticipant/${p.code}`
               results.push({
                 server: s,
+                sessionCode: code,
                 experimentName: experimentName,
                 experimentUrl: experimentUrl,
               })
@@ -282,7 +309,9 @@ async function getExperimentUrls(experiments) {
         enabled: expToEnable.includes(r.experimentName),
         servers: {},
       })
-      const expUrls = getOrSetValue(exp.servers, r.server, [])
+      const serverPlusSession = `${r.server}#${r.sessionCode}`
+      // const expUrls = getOrSetValue(exp.servers, r.server, [])
+      const expUrls = getOrSetValue(exp.servers, serverPlusSession, [])
       //console.log(`expUrls ${expUrls} oTreeUrls: ${r.experimentUrl}`)
       if (
         expUrls.includes(r.experimentUrl) ||
@@ -311,7 +340,7 @@ function agreeGame(users, uuid, agreement, usersDb) {
       console.error(`User ${user.userId} has not socket!`)
       return
     }
-    sock.emit("agree", { uuid: uuid, timeout: agreement.timeout })
+    sock.emit("agree", { uuid: uuid, timeout: agreement.timeout / 1000})
   }
 }
 
@@ -430,6 +459,10 @@ async function main() {
   const agreementIds = {}
   // Load URLs from oTree servers
   await getExperimentUrls(experiments)
+
+  // test create sessions
+  // await createSession(otreeIPs, otreeRestKey, "DropOutTest", 12)
+  // end test
 
   const expToEnable = config.experiments.map((e) => e.name)
   // Load schedulers from directory
