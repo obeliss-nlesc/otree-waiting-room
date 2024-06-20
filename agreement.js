@@ -7,7 +7,7 @@ class Agreement {
     this.urls = urls
     this.server = server
     this.state = "new"
-    this.timeout = timeout || 10
+    this.timeout = timeout || 10000
   }
 
   startTimeout(fn) {
@@ -23,7 +23,7 @@ class Agreement {
         this.state = "broken"
         fn(this, this.agreedUsers, nonAgreedUsers)
       }
-    }, this.timeout * 1000)
+    }, this.timeout)
   }
 
   breakAgreement() {
