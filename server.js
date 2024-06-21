@@ -314,7 +314,7 @@ function agreeGame(users, uuid, agreement, usersDb) {
       console.error(`User ${user.userId} has not socket!`)
       return
     }
-    sock.emit("agree", { uuid: uuid, timeout: agreement.timeout / 1000})
+    sock.emit("agree", { uuid: uuid, timeout: agreement.timeout / 1000 })
   }
 }
 
