@@ -25,7 +25,6 @@
       "name": "DropOutTest",
       "enabled": true,
       "agreementTimeout": 10000,
-      "ensureSlots": 20,
       "scheduler": {
         "type": "GatScheduler",
         "params": {

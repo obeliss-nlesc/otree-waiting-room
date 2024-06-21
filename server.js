@@ -80,32 +80,6 @@ function getOrSetValue(obj, key, defaultValue) {
   return obj[key]
 }
 
-function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipants) {
-  return new Promise((resolve, reject) => {
-    const config = {
-      headers: {
-        "otree-rest-key": otreeRestKey,
-      },
-    }
-    const payload = {
-      "session_config_name": sessionConfigName,
-      "num_participants": numParticipants
-    }
-    // const results = []
-    // Get a map of promises for every REST call to the servers
-    // then we can wait on all promises to resolve with Promise.all
-    const outerPromises = otreeIPs.map((s) => {
-      const apiUrl = `http://${s}/api/sessions`
-      //console.log(`Calling ${apiUrl}`)
-      return axios.post(apiUrl, payload, config).then(async (res) => {
-        console.log(res)
-      }).catch((err) => {
-        console.error(err)
-      })//axios
-    }) //outerPromises
-  })// Promise
-}
-
 function getOtreeUrls(otreeIPs, otreeRestKey) {
   return new Promise((resolve, reject) => {
     const config = {
@@ -459,10 +433,6 @@ async function main() {
   const agreementIds = {}
   // Load URLs from oTree servers
   await getExperimentUrls(experiments)
-
-  // test create sessions
-  // await createSession(otreeIPs, otreeRestKey, "DropOutTest", 12)
-  // end test
 
   const expToEnable = config.experiments.map((e) => e.name)
   // Load schedulers from directory
