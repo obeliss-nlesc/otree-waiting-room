@@ -11,40 +11,66 @@ const otreeRestKey = process.env.OTREE_REST_KEY
 //
 program
   .command('list <name>')
-  .description('Show an item.')
+  .description('Show an session urls.')
   .option('--count', 'Count urls.')
   .option('--sessions', 'List session names urls.')
+  .option('--urls', 'List only urls.')
 
   .action(async (name, options) => {
-    const results = await getOtreeUrls(otreeIPs, otreeRestKey)
-    const filter = results.filter(r => {
-      return (r.experimentName == name)
-    })
-    if (options.sessions) {
-      const sessions = [...new Set(filter.map(r => {
-        return r.sessionCode
-      }))]
-      console.log(sessions)
+    const results = [...await getOtreeUrls(otreeIPs, otreeRestKey)]
+      .filter(r => {
+        return (r.experimentName == name)
+      })
+
+    if (options.urls) {
+      const urls = results.map(r => {
+        return r.experimentUrl
+      })
+      console.log(urls)
       return
     }
-    if (options.count) {
-      console.log(`Number of urls for ${name}: ${filter.length}.`);
-    } else {
-      // console.log(`Showing item: ${name}`);
-      console.log(filter)
+    if (options.sessions) {
+      const sessions = [...new Set(results.map(r => {
+        return r.sessionCode
+      }))]
+      const sessionCounts = sessions.map(s => {
+        const count = results.reduce((a, r) => {
+          if (r.sessionCode == s) {
+            a += 1
+          }
+          return a
+        }, 0)
+        return {name: s, count: count}
+      })
+      console.log(sessionCounts)
+      return
     }
+
+    if (options.count) {
+      console.log(`Number of urls for ${name}: ${results.length}.`);
+      return
+    }
+
+    // console.log(`Showing item: ${name}`);
+    console.log(results)
   });
 
 program
   .command('create <name>')
   .description('Create session.')
-  .option('-s, --session-config-name <name>', 'Session config name.', 'basic')
-  .option('-n, --num-participants <size>', 'Number of participants for session.', parseInt)
-  .action((name, options) => {
-    if (options.force) {
-      console.log(`Forcibly creating item: ${name}`);
+  .option('--num <size>', 'Number of participants for session.', parseInt)
+  .action(async (name, options) => {
+    if (options.num) {
+      const num = options.num
+      console.log(`Creating ${num} of URLs for experiment ${name}.`)
+      try {
+        const results = await createSession(otreeIPs, otreeRestKey, name, num)
+        console.log(results)
+      } catch(err) {
+        console.error(err)
+      }
     } else {
-      console.log(`Creating item: ${name}`);
+      console.log(`Missing argument.`);
     }
   });
 
@@ -69,18 +95,27 @@ function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipant
       "session_config_name": sessionConfigName,
       "num_participants": numParticipants
     }
-    // const results = []
+    const results = []
     // Get a map of promises for every REST call to the servers
     // then we can wait on all promises to resolve with Promise.all
     const outerPromises = otreeIPs.map((s) => {
       const apiUrl = `http://${s}/api/sessions`
-      //console.log(`Calling ${apiUrl}`)
-      return axios.post(apiUrl, payload, config).then(async (res) => {
-        console.log(res)
+      // console.log(`Calling ${apiUrl}`)
+      return axios.post(apiUrl, payload, config).then((res) => {
+        // console.log(res.data)
+        results.push(res.data)
       }).catch((err) => {
         console.error(err)
       })//axios
     }) //outerPromises
+    Promise.all(outerPromises)
+      .then(() => {
+        // console.log(`${JSON.stringify(results,null,2)}`)
+        resolve(results)
+      })
+      .catch((error) => {
+        reject(error)
+      })
   })// Promise
 }
 
