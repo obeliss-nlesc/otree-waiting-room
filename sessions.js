@@ -10,55 +10,60 @@ const otreeRestKey = process.env.OTREE_REST_KEY
 //   .option("-n, --numParticipants <int>", "number of participants.")
 //
 program
-  .command('list <name>')
-  .description('Show an session urls.')
-  .option('--count', 'Count urls.')
-  .option('--sessions', 'List session names urls.')
-  .option('--urls', 'List only urls.')
+  .command("list <name>")
+  .description("Show an session urls.")
+  .option("--count", "Count urls.")
+  .option("--sessions", "List session names urls.")
+  .option("--urls", "List only urls.")
 
   .action(async (name, options) => {
-    const results = [...await getOtreeUrls(otreeIPs, otreeRestKey)]
-      .filter(r => {
-        return (r.experimentName == name)
-      })
+    const results = [...(await getOtreeUrls(otreeIPs, otreeRestKey))].filter(
+      (r) => {
+        return r.experimentName == name
+      },
+    )
 
     if (options.urls) {
-      const urls = results.map(r => {
+      const urls = results.map((r) => {
         return r.experimentUrl
       })
       console.log(urls)
       return
     }
     if (options.sessions) {
-      const sessions = [...new Set(results.map(r => {
-        return r.sessionCode
-      }))]
-      const sessionCounts = sessions.map(s => {
+      const sessions = [
+        ...new Set(
+          results.map((r) => {
+            return r.sessionCode
+          }),
+        ),
+      ]
+      const sessionCounts = sessions.map((s) => {
         const count = results.reduce((a, r) => {
           if (r.sessionCode == s) {
             a += 1
           }
           return a
         }, 0)
-        return {name: s, count: count}
+        return { name: s, count: count }
       })
       console.log(sessionCounts)
       return
     }
 
     if (options.count) {
-      console.log(`Number of urls for ${name}: ${results.length}.`);
+      console.log(`Number of urls for ${name}: ${results.length}.`)
       return
     }
 
     // console.log(`Showing item: ${name}`);
     console.log(results)
-  });
+  })
 
 program
-  .command('create <name>')
-  .description('Create session.')
-  .option('--num <size>', 'Number of participants for session.', parseInt)
+  .command("create <name>")
+  .description("Create session.")
+  .option("--num <size>", "Number of participants for session.", parseInt)
   .action(async (name, options) => {
     if (options.num) {
       const num = options.num
@@ -66,13 +71,13 @@ program
       try {
         const results = await createSession(otreeIPs, otreeRestKey, name, num)
         console.log(results)
-      } catch(err) {
+      } catch (err) {
         console.error(err)
       }
     } else {
-      console.log(`Missing argument.`);
+      console.log(`Missing argument.`)
     }
-  });
+  })
 
 program.parse(process.argv)
 const options = program.opts()
@@ -84,7 +89,12 @@ function getOrSetValue(obj, key, defaultValue) {
   return obj[key]
 }
 
-function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipants) {
+function createSession(
+  otreeIPs,
+  otreeRestKey,
+  sessionConfigName,
+  numParticipants,
+) {
   return new Promise((resolve, reject) => {
     const config = {
       headers: {
@@ -92,8 +102,8 @@ function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipant
       },
     }
     const payload = {
-      "session_config_name": sessionConfigName,
-      "num_participants": numParticipants
+      session_config_name: sessionConfigName,
+      num_participants: numParticipants,
     }
     const results = []
     // Get a map of promises for every REST call to the servers
@@ -101,12 +111,15 @@ function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipant
     const outerPromises = otreeIPs.map((s) => {
       const apiUrl = `http://${s}/api/sessions`
       // console.log(`Calling ${apiUrl}`)
-      return axios.post(apiUrl, payload, config).then((res) => {
-        // console.log(res.data)
-        results.push(res.data)
-      }).catch((err) => {
-        console.error(err)
-      })//axios
+      return axios
+        .post(apiUrl, payload, config)
+        .then((res) => {
+          // console.log(res.data)
+          results.push(res.data)
+        })
+        .catch((err) => {
+          console.error(err)
+        }) //axios
     }) //outerPromises
     Promise.all(outerPromises)
       .then(() => {
@@ -116,7 +129,7 @@ function createSession(otreeIPs, otreeRestKey, sessionConfigName, numParticipant
       .catch((error) => {
         reject(error)
       })
-  })// Promise
+  }) // Promise
 }
 
 function getOtreeUrls(otreeIPs, otreeRestKey) {
@@ -172,11 +185,9 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
   })
 }
 
-
 function lastElement(arr) {
   return arr[arr.length - 1]
 }
-
 
 async function getExperimentUrls(experiments) {
   const expToEnable = config.experiments.map((e) => e.name)
@@ -220,16 +231,13 @@ async function getExperimentUrls(experiments) {
   }
 }
 
-
 async function main() {
-
   // Get current server URLs
   // const results = await getOtreeUrls(otreeIPs, otreeRestKey)
   // console.log(results)
   // test create sessions
   // await createSession(otreeIPs, otreeRestKey, "DropOutTest", 12)
   // end test
-
 }
 
 main()

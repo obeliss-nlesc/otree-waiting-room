@@ -123,18 +123,21 @@ node encode-url.js -n 5 -h localhost:8080
 To list the URLs on the oTree servers use the helper tool `sessions.js`
 
 ### List experiment urls
+
 ```shell
 node sessions.js list [NAME]
 ```
 
 ### List experiment sessions
+
 ```shell
 node sessions.js list [NAME] --sessions
 ```
 
 ### Count experiment URLs
+
 ```shell
-node sessions.js list [NAME] --count 
+node sessions.js list [NAME] --count
 ```
 
 ## Create experiment sessions
@@ -142,11 +145,10 @@ node sessions.js list [NAME] --count
 To create session URLs for an experiment use the helper command `sessions.js`
 
 ### Create session with N participants
+
 ```shell
 node sessions.js create [NAME] --num [NUM OF PARTICIPANTS]
 ```
-
-
 
 ## Starting the server using PM2
 
