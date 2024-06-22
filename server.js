@@ -106,6 +106,7 @@ function getOtreeUrls(otreeIPs, otreeRestKey) {
               const experimentUrl = `http://${s}/InitializeParticipant/${p.code}`
               results.push({
                 server: s,
+                sessionCode: code,
                 experimentName: experimentName,
                 experimentUrl: experimentUrl,
               })
@@ -282,7 +283,9 @@ async function getExperimentUrls(experiments) {
         enabled: expToEnable.includes(r.experimentName),
         servers: {},
       })
-      const expUrls = getOrSetValue(exp.servers, r.server, [])
+      const serverPlusSession = `${r.server}#${r.sessionCode}`
+      // const expUrls = getOrSetValue(exp.servers, r.server, [])
+      const expUrls = getOrSetValue(exp.servers, serverPlusSession, [])
       //console.log(`expUrls ${expUrls} oTreeUrls: ${r.experimentUrl}`)
       if (
         expUrls.includes(r.experimentUrl) ||
@@ -311,7 +314,7 @@ function agreeGame(users, uuid, agreement, usersDb) {
       console.error(`User ${user.userId} has not socket!`)
       return
     }
-    sock.emit("agree", { uuid: uuid, timeout: agreement.timeout })
+    sock.emit("agree", { uuid: uuid, timeout: agreement.timeout / 1000 })
   }
 }
 

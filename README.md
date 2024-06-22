@@ -118,6 +118,38 @@ Use the encode-url.js helper script to generate test urls.
 node encode-url.js -n 5 -h localhost:8080
 ```
 
+## Query oTree servers
+
+To list the URLs on the oTree servers use the helper tool `sessions.js`
+
+### List experiment urls
+
+```shell
+node sessions.js list [NAME]
+```
+
+### List experiment sessions
+
+```shell
+node sessions.js list [NAME] --sessions
+```
+
+### Count experiment URLs
+
+```shell
+node sessions.js list [NAME] --count
+```
+
+## Create experiment sessions
+
+To create session URLs for an experiment use the helper command `sessions.js`
+
+### Create session with N participants
+
+```shell
+node sessions.js create [NAME] --num [NUM OF PARTICIPANTS]
+```
+
 ## Starting the server using PM2
 
 To manage the server with pm2, first install pm2
