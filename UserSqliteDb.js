@@ -1,4 +1,4 @@
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require("sqlite3").verbose()
 // const db = new sqlite3.Database(':memory:');
 const User = require("./user.js")
 
@@ -6,25 +6,27 @@ class UserDb extends Map {
   constructor(file) {
     super()
     this.writeCounter = 0
-    this.db = new sqlite3.Database(file);
+    this.db = new sqlite3.Database(file)
     this.db.serialize(() => {
       this.db.run(`
         CREATE TABLE IF NOT EXISTS users (
           userId TEXT PRIMARY KEY,
           jsonObj TEXT
         )
-      `);
-    });
+      `)
+    })
   }
-  load(){
-      const query = `SELECT * FROM users`;
-      this.db.all(query, (err, rows) => {
-        if (err) {
-          console.error(err);
-        } else {
-          rows.map(r => {
+  load() {
+    const query = `SELECT * FROM users`
+    this.db.all(query, (err, rows) => {
+      if (err) {
+        console.error(err)
+      } else {
+        rows
+          .map((r) => {
             return JSON.parse(r.jsonObj)
-          }).forEach(u => {
+          })
+          .forEach((u) => {
             console.log(u)
             const user = new User(u.userId, u.experimentId)
             user.redirectedUrl = u.redirectedUrl
@@ -36,8 +38,8 @@ class UserDb extends Map {
             const compoundKey = `${user.userId}:${user.experimentId}`
             this.set(compoundKey, user)
           })
-        }
-      });
+      }
+    })
   }
   find(userId) {
     return Array.from(this.values()).filter((u) => {
@@ -61,16 +63,20 @@ class UserDb extends Map {
 
     return JSON.stringify(data)
   }
-  saveUser(user){
-    const query = `INSERT INTO users (userId, jsonObj) VALUES (?, ?)`;
+  saveUser(user) {
+    const query = `INSERT INTO users (userId, jsonObj) VALUES (?, ?)`
     const compoundKey = `${user.userId}:${user.experimentId}`
-    this.db.run(query, [compoundKey, JSON.stringify(user.serialize())], function (err) {
-      if (err) {
-        console.error(err);
-      } else {
-        console.log(`${compoundKey} written`)
-      }
-    });
+    this.db.run(
+      query,
+      [compoundKey, JSON.stringify(user.serialize())],
+      function (err) {
+        if (err) {
+          console.error(err)
+        } else {
+          console.log(`${compoundKey} written`)
+        }
+      },
+    )
   }
   save() {
     this.writeCounter += 1
