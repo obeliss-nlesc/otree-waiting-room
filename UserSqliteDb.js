@@ -63,39 +63,63 @@ class UserDb extends Map {
 
     return JSON.stringify(data)
   }
-  saveUser(user) {
-    const query = `INSERT INTO users (userId, jsonObj) VALUES (?, ?)`
-    const compoundKey = `${user.userId}:${user.experimentId}`
-    this.db.run(
-      query,
-      [compoundKey, JSON.stringify(user.serialize())],
-      function (err) {
-        if (err) {
-          console.error(err)
-        } else {
-          console.log(`${compoundKey} written`)
-        }
-      },
-    )
+  upsert(user) {
+    return new Promise((resolve, reject) => {
+      const query = `
+        INSERT INTO users (userId, jsonObj) 
+        VALUES (?, ?)
+        ON CONFLICT(userId) DO UPDATE SET 
+          jsonObj = excluded.jsonObj
+      `
+      const compoundKey = `${user.userId}:${user.experimentId}`
+      this.db.run(
+        query,
+        [compoundKey, JSON.stringify(user.serialize())],
+        function (err) {
+          if (err) {
+            reject(err)
+          } else {
+            // console.log(`${compoundKey} upsert`)
+            resolve(compoundKey)
+          }
+        },
+      )
+    })
   }
-  save() {
+  save(user) {
+    return new Promise((resolve, reject) => {
+      const query = `INSERT INTO users (userId, jsonObj) VALUES (?, ?)`
+      const compoundKey = `${user.userId}:${user.experimentId}`
+      this.db.run(
+        query,
+        [compoundKey, JSON.stringify(user.serialize())],
+        function (err) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(compoundKey)
+          }
+        },
+      )
+    }) // Promise
+  }
+  saveAll() {
     this.writeCounter += 1
     const currentCounter = this.writeCounter
     setTimeout(() => {
       if (currentCounter != this.writeCounter || this.writeCounter === 0) {
         return
       }
-      this.#save()
+      this.forEach((u, k) => {
+        this.upsert(u)
+      })
     }, 500)
   }
   forceSave() {
-    this.#save()
-  }
-  #save() {
-    const data = []
-    this.forEach((u, k) => {
-      this.saveUser(u)
+    const allUpserts = [...this.values()].map((u) => {
+      return this.upsert(u)
     })
+    return Promise.all(allUpserts)
   }
 }
 

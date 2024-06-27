@@ -833,6 +833,7 @@ async function main() {
         user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
         user.changeState("inoTreePages")
         sock.emit("gameStart", { room: user.redirectedUrl })
+        usersDb.upsert(user)
         console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
       }
       if (!copyVars) {
@@ -865,7 +866,7 @@ async function main() {
       } // copyVars
     }
     // Save users to file with the new redirected urls
-    usersDb.save()
+    // usersDb.saveAll()
   }
 
   // Start the server
