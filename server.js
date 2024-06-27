@@ -20,7 +20,8 @@ const Agreement = require("./agreement.js")
 const ClassLoader = require("./class_loader.js")
 // const config = require("./config.json")
 const { userInfo } = require("os")
-const UserDb = require("./UserDb.js")
+// const UserDb = require("./UserDb.js")
+const UserDb = require("./UserSqliteDb.js")
 
 require("dotenv").config()
 const otreeIPs = process.env.OTREE_IPS.split(",")
@@ -43,7 +44,7 @@ const config = options.config
   : require("./config.json")
 
 const port = options.port || "8060"
-const userDbFile = options.dbFile || "./data/userdb.json"
+const userDbFile = options.dbFile || "./data/userdb.sqlite"
 //const publicKey = fs.readFileSync("./public-key.pem", "utf8")
 //
 /**
