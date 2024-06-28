@@ -1,9 +1,8 @@
 const sqlite3 = require("sqlite3").verbose()
-// const db = new sqlite3.Database(':memory:');
 const User = require("./user.js")
 const UserMap = require("./UserMap.js")
 
-class UserDb extends UserMap {
+class UserSqliteDb extends UserMap {
   constructor(file) {
     super()
     this.writeCounter = 0
@@ -17,6 +16,7 @@ class UserDb extends UserMap {
       `)
     })
   }
+
   load() {
     return new Promise((resolve, reject) => {
       const query = `SELECT * FROM users`
@@ -46,6 +46,7 @@ class UserDb extends UserMap {
       })
     }) //Promise
   }
+
   upsert(user) {
     return new Promise((resolve, reject) => {
       const query = `
@@ -69,6 +70,7 @@ class UserDb extends UserMap {
       )
     })
   }
+
   save(user) {
     return new Promise((resolve, reject) => {
       const query = `INSERT INTO users (userId, jsonObj) VALUES (?, ?)`
@@ -86,6 +88,7 @@ class UserDb extends UserMap {
       )
     }) // Promise
   }
+
   saveAll() {
     this.writeCounter += 1
     const currentCounter = this.writeCounter
@@ -98,6 +101,7 @@ class UserDb extends UserMap {
       })
     }, 500)
   }
+
   forceSave() {
     const allUpserts = [...this.values()].map((u) => {
       return this.upsert(u)
@@ -106,5 +110,5 @@ class UserDb extends UserMap {
   }
 }
 
-module.exports = UserDb
+module.exports = UserSqliteDb
 
