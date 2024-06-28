@@ -614,7 +614,6 @@ async function main() {
       total += numberOfUrls
       const sessionId = k.split("#")[1]
       const usersInSession = usersDb.getUsersInSession(sessionId).map((u) => {
-        console.log(u)
         return u.userId
       })
       const numberOfUsers = usersInSession.length
