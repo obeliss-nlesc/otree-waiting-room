@@ -111,4 +111,3 @@ class UserSqliteDb extends UserMap {
 }
 
 module.exports = UserSqliteDb
-

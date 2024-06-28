@@ -4,9 +4,9 @@ class UserMap extends Map {
   constructor(file) {
     super()
   }
-  
+
   load() {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.")
   }
 
   find(userId) {
@@ -45,21 +45,20 @@ class UserMap extends Map {
   }
 
   upsert(user) {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.")
   }
 
   save(user) {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.")
   }
 
   saveAll() {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.")
   }
 
   forceSave() {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.")
   }
 }
 
 module.exports = UserMap
-
