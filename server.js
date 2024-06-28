@@ -588,6 +588,43 @@ async function main() {
     //console.log("HEADERS: ", req.headers)
     res.status(201).json(experiments)
   })
+  
+  app.get("/info/:experimentId", validatePass, async (req, res) => {
+    const experimentId = req.params.experimentId
+    const experiment = experiments[experimentId]
+    if (!experiment) {
+      res.status(404).send()
+      return
+    }
+    let htmlString = `<!doctype html><html><title>${experimentId} Urls</title><body><table border="1">`
+    const headerTable = `<tr>
+                            <th>Session</th>
+                            <th>No. Of Available Urls</th>
+                        </tr>`
+    htmlString += headerTable
+    let total = 0
+    Object.keys(experiment.servers).forEach(k => {
+      const urls = experiment.servers[k]
+      const numberOfUrls = urls.length
+      total += numberOfUrls
+      const sessionId = k.split('#')[1]
+      const host = k.split('#')[0]
+      let row = `<tr>
+                    <td>${sessionId}</td>
+                    <td>${numberOfUrls}</td>
+                </tr>`
+      htmlString += row
+    })
+    let lastRow = `<tr>
+                  <td>TOTAL</td>
+                  <td>${total}</td>
+              </tr>`
+    htmlString += `${lastRow}</table></body></html>`
+
+
+
+    res.status(201).send(htmlString)
+  })
 
   app.get("/urls/:experimentId/:noOfUrls?", validatePass, async (req, res) => {
     const today = getYmdDate(new Date())
