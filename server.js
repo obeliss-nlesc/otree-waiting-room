@@ -598,7 +598,7 @@ async function main() {
     }
     let htmlString = `<!doctype html><html><title>${experimentId} Urls</title>
                         <style>th {text-align: left;}</style>
-                        <body><table border="1">`
+                        <body><h1>${experimentId}</h1><table border="1">`
     const headerTable = `<tr>
                             <th>Session</th>
                             <th>No. Of Available Urls</th>
