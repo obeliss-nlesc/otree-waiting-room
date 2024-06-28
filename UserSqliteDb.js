@@ -34,6 +34,7 @@ class UserDb extends Map {
               user.redirectedUrl = u.redirectedUrl
               user.experimentUrl = u.experimentUrl
               user.groupId = u.groupId
+              user.server = u.server
               user.oTreeId = u.oTreeId
               user.tokenParams = u.tokenParams
               user.state = u.redirectedUrl ? u.state : user.state
@@ -48,6 +49,15 @@ class UserDb extends Map {
   find(userId) {
     return Array.from(this.values()).filter((u) => {
       return u.userId == userId
+    })
+  }
+  getUsersInSession(session) {
+    return Array.from(this.values()).filter((u) => {
+      if (!u.server) {
+        return false
+      }
+      const userSession = u.server.split("#")[1]
+      return userSession == session
     })
   }
   getUsedUrls() {

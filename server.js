@@ -596,28 +596,43 @@ async function main() {
       res.status(404).send()
       return
     }
-    let htmlString = `<!doctype html><html><title>${experimentId} Urls</title><body><table border="1">`
+    let htmlString = `<!doctype html><html><title>${experimentId} Urls</title>
+                        <style>th {text-align: left;}</style>
+                        <body><table border="1">`
     const headerTable = `<tr>
                             <th>Session</th>
                             <th>No. Of Available Urls</th>
+                            <th>No. Of Users in session</th>
+                            <th>Users in session</th>
                         </tr>`
     htmlString += headerTable
     let total = 0
+    let totalUsers = 0
     Object.keys(experiment.servers).forEach((k) => {
       const urls = experiment.servers[k]
       const numberOfUrls = urls.length
       total += numberOfUrls
       const sessionId = k.split("#")[1]
+      const usersInSession = usersDb.getUsersInSession(sessionId).map((u) => {
+        console.log(u)
+        return u.userId
+      })
+      const numberOfUsers = usersInSession.length
+      totalUsers += numberOfUsers
       const host = k.split("#")[0]
       let row = `<tr>
                     <td>${sessionId}</td>
                     <td>${numberOfUrls}</td>
+                    <td>${numberOfUsers}</td>
+                    <td>${JSON.stringify(usersInSession)}</td>
                 </tr>`
       htmlString += row
     })
     let lastRow = `<tr>
-                  <td>TOTAL</td>
+                  <td>TOTALS</td>
                   <td>${total}</td>
+                  <td>${totalUsers}</td>
+                  <td></td>
               </tr>`
     htmlString += `${lastRow}</table></body></html>`
 
@@ -827,6 +842,7 @@ async function main() {
           agreement.urls,
           agreement.experimentId,
           agreement.agreementId,
+          agreement.server,
         )
       }
     })
@@ -843,7 +859,7 @@ async function main() {
    * @param users {string[]}
    * @param urls {string[]}
    */
-  function startGame(users, urls, experimentId, agreementId) {
+  function startGame(users, urls, experimentId, agreementId, server) {
     console.log(`Starting game with users: ${users} and urls ${urls}.`)
     // Set copyVars to true if you want to send variables to oTree before redirect
     // e.g. lobby_id
@@ -866,6 +882,7 @@ async function main() {
         user.experimentUrl = expUrl
         user.groupId = agreementId
         user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+        user.server = server
         user.changeState("inoTreePages")
         sock.emit("gameStart", { room: user.redirectedUrl })
         usersDb.upsert(user)

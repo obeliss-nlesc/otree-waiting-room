@@ -29,6 +29,7 @@ class UserDb extends Map {
             user.experimentUrl = u.experimentUrl
             user.groupId = u.groupId
             user.oTreeId = u.oTreeId
+            user.server = u.server
             user.tokenParams = u.tokenParams
             user.state = u.redirectedUrl ? u.state : user.state
             const compoundKey = `${user.userId}:${user.experimentId}`
