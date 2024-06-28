@@ -56,6 +56,10 @@ class UserMap extends Map {
     throw new Error("Method not implemented.")
   }
 
+  findAll() {
+    throw new Error("Method not implemented.")
+  }
+
   forceSave() {
     throw new Error("Method not implemented.")
   }

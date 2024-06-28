@@ -17,6 +17,23 @@ class UserSqliteDb extends UserMap {
     })
   }
 
+  _getTableNames() {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        "SELECT name FROM sqlite_master WHERE type='table'",
+        [],
+        (err, rows) => {
+          if (err) {
+            reject(err)
+          } else {
+            const tableNames = rows.map((row) => row.name)
+            resolve(tableNames)
+          }
+        },
+      )
+    }) // Promise
+  }
+
   load() {
     return new Promise((resolve, reject) => {
       const query = `SELECT * FROM users`
@@ -45,6 +62,19 @@ class UserSqliteDb extends UserMap {
         }
       })
     }) //Promise
+  }
+
+  findAll() {
+    return new Promise((resolve, reject) => {
+      const query = `SELECT * FROM users`
+      this.db.all(query, (err, rows) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
+        }
+      })
+    }) // Promise
   }
 
   upsert(user) {
