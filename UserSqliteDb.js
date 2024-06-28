@@ -43,7 +43,7 @@ class UserDb extends Map {
           resolve(this)
         }
       })
-    })//Promise
+    }) //Promise
   }
   find(userId) {
     return Array.from(this.values()).filter((u) => {
