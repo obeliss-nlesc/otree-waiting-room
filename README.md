@@ -177,7 +177,7 @@ http://localhost:8060/info/[EXPERIMENT_NAME]?secret=[SECRET_USED_IN_URL_PASS]
 ```
 
 E.g. for Experiment `DropOutTest`
-![DropOutTest](./droptouttest_info.png)
+![DropOutTest](./dropouttest_info.png)
 
 ## Starting the server using PM2
 
