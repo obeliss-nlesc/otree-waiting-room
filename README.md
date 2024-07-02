@@ -47,7 +47,18 @@ POSTGRES_PASSWORD=somepassword
 OTREE_REST_KEY=somepassword
 SECRET_KEY="some secret in quotes"
 API_KEY="some other secret in quotes"
+URL_PASS="some SHA256 hashed secret in quotes"
 ```
+
+- `POSTGRES_IPS`: The POSTGRES server IPs comma separated.
+- `OTREE_IPS`: The OTREE server IPs comma separated.
+- `POSTGRES_USER`: The POSTGRES database username.
+- `POSTGRES_DB`: The POSTGRES database name used by oTree.
+- `POSTGRES_PASSWORD`: The POSTGRES user password.
+- `OTREE_REST_KEY`: The oTree REST KEY to access the oTree API.
+- `SECRET_KEY`: A secret key used to generate a waiting room URL signiture token.
+- `API_KEY`: An API key to access the admin REST API for the waiting room.
+- `URL_PASS`: A password used to access the waiting room info/helper pages. This password is created using the helper script `create-url-password-hash.js`
 
 ## Setup experiments config.json file
 
@@ -92,7 +103,7 @@ Group by Arrival Time scheduler i.e. it will group people on a first come first 
 
 ## File database
 
-By default the waiting room will save user details in a json file database `data/userdb.json`.
+By default the waiting room will save user details in a sqlite file database `data/userdb.sqlite`.
 A different file can be passed as a parameter using `--db-file` option when starting the server.
 The database stores the used urls i.e. urls that have alreaddy been used by a user.
 On restarting the server waiting room, these urls are removed from the list of available urls so that
@@ -112,7 +123,13 @@ start the server with --reset-db flag.
 
 ## Generate test URLs
 
-Use the encode-url.js helper script to generate test urls.
+Use the helper URL path to generate tests URLS:
+
+```
+http://localhost:8060/urls/[EXPIMENT_NAME]/[NO_OF_URLS]?secret=[SECRET_USED_IN_URL_PASS]
+```
+
+Or use the encode-url.js helper script to generate test urls.
 
 ```shell
 node encode-url.js -n 5 -h localhost:8080
@@ -149,6 +166,18 @@ To create session URLs for an experiment use the helper command `sessions.js`
 ```shell
 node sessions.js create [NAME] --num [NUM OF PARTICIPANTS]
 ```
+
+## Simple info dashboard
+
+The server comes with a simple info page showing the number of available URLs, number of users and user ids per session.
+The info page is accessed through the following path:
+
+```
+http://localhost:8060/info/[EXPERIMENT_NAME]?secret=[SECRET_USED_IN_URL_PASS]
+```
+
+E.g. for Experiment `DropOutTest`
+![DropOutTest](./dropouttest_info.png)
 
 ## Starting the server using PM2
 

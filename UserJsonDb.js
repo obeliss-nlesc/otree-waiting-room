@@ -3,9 +3,9 @@
 const murmurhash = require("murmurhash")
 const fs = require("fs").promises
 const User = require("./user.js")
-const { SHA1 } = require("crypto-js")
+const UserMap = require("./UserMap.js")
 
-class UserDb extends Map {
+class UserJsonDb extends UserMap {
   constructor(file) {
     super()
     this.seed = 42
@@ -13,6 +13,7 @@ class UserDb extends Map {
     this.lastHash = 0
     this.writeCounter = 0
   }
+
   load() {
     let data = []
     return fs
@@ -29,6 +30,7 @@ class UserDb extends Map {
             user.experimentUrl = u.experimentUrl
             user.groupId = u.groupId
             user.oTreeId = u.oTreeId
+            user.server = u.server
             user.tokenParams = u.tokenParams
             user.state = u.redirectedUrl ? u.state : user.state
             const compoundKey = `${user.userId}:${user.experimentId}`
@@ -41,28 +43,12 @@ class UserDb extends Map {
         )
       })
   }
-  find(userId) {
-    return Array.from(this.values()).filter((u) => {
-      return u.userId == userId
-    })
-  }
-  getUsedUrls() {
-    return Array.from(this.values())
-      .filter((u) => {
-        return u.experimentUrl
-      })
-      .map((u) => {
-        return u.experimentUrl
-      })
-  }
-  dump() {
-    const data = []
-    this.forEach((v, k) => {
-      data.push(v.serialize())
-    })
 
-    return JSON.stringify(data)
+  upsert() {
+    // Implement interface method
+    return this.save()
   }
+
   save() {
     this.writeCounter += 1
     const currentCounter = this.writeCounter
@@ -73,15 +59,20 @@ class UserDb extends Map {
       this.#save()
     }, 500)
   }
+
+  saveAll() {
+    return this.save()
+  }
+
   forceSave() {
     const data = []
     this.forEach((v, k) => {
       data.push(v.serialize())
     })
     const dump = JSON.stringify(data, null, 2)
-
     return fs.writeFile(this.file, dump)
   }
+
   #save() {
     const data = []
     this.forEach((v, k) => {
@@ -104,4 +95,4 @@ class UserDb extends Map {
   }
 }
 
-module.exports = UserDb
+module.exports = UserJsonDb

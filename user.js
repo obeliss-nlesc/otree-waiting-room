@@ -6,6 +6,7 @@ class User {
     this.oTreeId = null
     this.redirectedUrl = null
     this.experimentUrl = null
+    this.server = null
     this.groupId = null
     this.state = "new"
     this.listeners = []
@@ -21,6 +22,7 @@ class User {
       groupId: this.groupId,
       experimentUrl: this.experimentUrl,
       state: this.state,
+      server: this.server,
       oTreeId: this.oTreeId,
       tokenParams: this.tokenParams,
       timestamp: this.timestamp,
