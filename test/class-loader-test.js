@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const ClassLoader = require("../class_loader.js")
+const ClassLoader = require("../class-loader.js")
 
 test("test private constructor ClassLoader", async () => {
   assert.throws(() => {
