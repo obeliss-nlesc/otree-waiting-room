@@ -8,19 +8,12 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
 const fs = require("fs")
-const jwt = require("jsonwebtoken")
 const CryptoJS = require("crypto-js")
-// Use a local queue or a redis queue
-// E.g. const Queue = require('./redis-queue.js')
 const Queue = require("./local-queue.js")
 const db = require("./postgres-db")
 const User = require("./user.js")
 const Agreement = require("./agreement.js")
-// const classLoader = require('./class_loader.js')
 const ClassLoader = require("./class-loader.js")
-// const config = require("./config.json")
-const { userInfo } = require("os")
-// const UserDb = require("./UserDb.js")
 const UserDb = require("./UserSqliteDb.js")
 
 require("dotenv").config()
@@ -247,6 +240,7 @@ const validateHmac = (req, res, next) => {
 }
 
 // Middleware to validate JWT
+// const jwt = require("jsonwebtoken")
 // const validateToken = (req, res, next) => {
 //   const token = req.query.token
 //   if (!token) {

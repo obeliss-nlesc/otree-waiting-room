@@ -29,6 +29,10 @@ test("test GAT scheduler with enough rooms", () => {
     },
   )
   users.forEach((user) => {
+    user.changeState("startedPage")
+  })
+
+  users.forEach((user) => {
     user.changeState("queued")
     scheduler.queueUser(user)
   })
@@ -93,6 +97,9 @@ test("test GAT scheduler without enough rooms", () => {
     },
   )
   users.forEach((user) => {
+    user.changeState("startedPage")
+  })
+  users.forEach((user) => {
     user.changeState("queued")
     scheduler.queueUser(user)
   })
@@ -145,6 +152,9 @@ test("test GAT scheduler with used URLs", () => {
   const scheduler = new Scheduler(experimentName, LocalQueue, { min: 3 })
   const users = ["u01", "u02", "u03"].map((userId) => {
     return new User(userId, experimentName)
+  })
+  users.forEach((user) => {
+    user.changeState("startedPage")
   })
   users.forEach((user) => {
     user.changeState("queued")
