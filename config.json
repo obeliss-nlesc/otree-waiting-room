@@ -24,7 +24,7 @@
     {
       "name": "DropOutTest",
       "enabled": true,
-      "agreementTimeout": 10000,
+      "agreementTimeout": 100,
       "scheduler": {
         "type": "GatScheduler",
         "params": {

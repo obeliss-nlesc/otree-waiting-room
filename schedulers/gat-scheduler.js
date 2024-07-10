@@ -11,6 +11,7 @@ class GatScheduler {
     this.experimentName = experimentName
     this.min = parseInt(params.min)
     this.queue = new Queue(this.experimentName)
+    this.currentIndex = -1
     console.log(`Loaded GAT scheduler params: min ${this.min}`)
   }
 
@@ -72,6 +73,35 @@ class GatScheduler {
     return Object.values(experiment.servers).some((s) => s.length >= this.min)
   }
 
+  #getNextServer(experiments, usedUrls) {
+    const keys = Object.keys(experiments)
+    const values = Object.values(experiments)
+    console.log(keys)
+
+
+    for(let i = 0; i < keys.length; i++) {
+      this.currentIndex = (this.currentIndex + 1) % keys.length
+      const serverIp = keys[this.currentIndex]
+      const serverUrls = values[this.currentIndex]
+      if (serverUrls.length < this.min) {
+        continue
+      }
+
+      let unusedUrlsCount = 0
+      for (let serverUrl of serverUrls) {
+        if (!usedUrls.has(serverUrl)) {
+          unusedUrlsCount += 1
+        }
+      }
+      if (unusedUrlsCount < this.min) {
+        continue
+      }
+      console.log(`index ${this.currentIndex} server ${serverIp}`)
+      return [serverIp, serverUrls]
+    }
+    return [null, null]
+  }
+
   checkConditionAndReturnUsers(experiments, usedUrls) {
     // await this.queue.wait()
     const queueSize = this.queue.size()
@@ -93,49 +123,77 @@ class GatScheduler {
       return falseCondition
     }
 
-    for (const [serverIp, serverUrls] of Object.entries(
-      experiments[this.experimentName].servers,
-    )) {
-      if (serverUrls.length < this.min) {
-        continue
-      }
-
-      let unusedUrlsCount = 0
-      for (let serverUrl of serverUrls) {
-        if (!usedUrls.has(serverUrl)) {
-          unusedUrlsCount += 1
-        }
-      }
-      if (unusedUrlsCount < this.min) {
-        continue
-      }
-
-      const users = this.queue.pop(this.min)
-      for (const user of users) {
-        while (true) {
-          const url = serverUrls.pop()
-          if (!usedUrls.has(url)) {
-            user.redirectedUrl = url
-            user.changeState("waitAgreement")
-            usedUrls.add(url)
-            break
-          }
-          serverUrls.unshift(url)
-        }
-      }
-      // this.queue.unlock()
-      return {
-        condition: true,
-        users: users,
-        waitForCount: 0,
-        server: serverIp,
-      }
+    const [serverIp, serverUrls] = this.#getNextServer(experiments[this.experimentName].servers, usedUrls)
+    if (!serverIp) {
+      return falseCondition
     }
 
+    const users = this.queue.pop(this.min)
+    for (const user of users) {
+      while (true) {
+        const url = serverUrls.pop()
+        if (!usedUrls.has(url)) {
+          user.redirectedUrl = url
+          user.changeState("waitAgreement")
+          usedUrls.add(url)
+          break
+        }
+        serverUrls.unshift(url)
+      }
+    }
     // this.queue.unlock()
-    return falseCondition
+    return {
+      condition: true,
+      users: users,
+      waitForCount: 0,
+      server: serverIp,
+    }
+
+
+
+    // for (const [serverIp, serverUrls] of Object.entries(
+    //   experiments[this.experimentName].servers,
+    // )) {
+    //   if (serverUrls.length < this.min) {
+    //     continue
+    //   }
+    //
+    //   let unusedUrlsCount = 0
+    //   for (let serverUrl of serverUrls) {
+    //     if (!usedUrls.has(serverUrl)) {
+    //       unusedUrlsCount += 1
+    //     }
+    //   }
+    //   if (unusedUrlsCount < this.min) {
+    //     continue
+    //   }
+    //
+    //   const users = this.queue.pop(this.min)
+    //   for (const user of users) {
+    //     while (true) {
+    //       const url = serverUrls.pop()
+    //       if (!usedUrls.has(url)) {
+    //         user.redirectedUrl = url
+    //         user.changeState("waitAgreement")
+    //         usedUrls.add(url)
+    //         break
+    //       }
+    //       serverUrls.unshift(url)
+    //     }
+    //   }
+    //   // this.queue.unlock()
+    //   return {
+    //     condition: true,
+    //     users: users,
+    //     waitForCount: 0,
+    //     server: serverIp,
+    //   }
+    // }
+    //
+    // // this.queue.unlock()
+    // return falseCondition
   }
-}
+} // Class
 
 module.exports = function () {
   return {
