@@ -214,7 +214,17 @@ test("test GAT scheduler round robin balance over different servers/sessions", (
   // const usedUrls = new Set(["http://127.0.0.1/1"])
   const usedUrls = new Set()
   const scheduler = new Scheduler(experimentName, LocalQueue, { min: 3 })
-  const users = ["u01", "u02", "u03", "u04", "u05", "u06", "u07", "u08", "u09"].map((userId) => {
+  const users = [
+    "u01",
+    "u02",
+    "u03",
+    "u04",
+    "u05",
+    "u06",
+    "u07",
+    "u08",
+    "u09",
+  ].map((userId) => {
     return new User(userId, experimentName)
   })
   users.forEach((user) => {
@@ -228,7 +238,7 @@ test("test GAT scheduler round robin balance over different servers/sessions", (
 
   let lastServer = null
 
-  for(let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3; i++) {
     // Schedule 3 times, each time the next server#session should be chosen
     let conditionObject = scheduler.checkConditionAndReturnUsers(
       experiments,
@@ -259,22 +269,26 @@ test("test GAT scheduler round robin balance over different servers/sessions wit
           "http://127.0.0.1/8",
           "http://127.0.0.1/9",
         ],
-        "127.0.0.1#plmokn": [
-          "http://127.0.0.1/11",
-        ],
-        "127.0.0.2#qazwsx": [
-          "http://127.0.0.2/21",
-        ],
-        "127.0.0.2#wsxedc": [
-          "http://127.0.0.2/31",
-        ],
+        "127.0.0.1#plmokn": ["http://127.0.0.1/11"],
+        "127.0.0.2#qazwsx": ["http://127.0.0.2/21"],
+        "127.0.0.2#wsxedc": ["http://127.0.0.2/31"],
       },
     },
   }
   // const usedUrls = new Set(["http://127.0.0.1/1"])
   const usedUrls = new Set()
   const scheduler = new Scheduler(experimentName, LocalQueue, { min: 3 })
-  const users = ["u01", "u02", "u03", "u04", "u05", "u06", "u07", "u08", "u09"].map((userId) => {
+  const users = [
+    "u01",
+    "u02",
+    "u03",
+    "u04",
+    "u05",
+    "u06",
+    "u07",
+    "u08",
+    "u09",
+  ].map((userId) => {
     return new User(userId, experimentName)
   })
   users.forEach((user) => {
@@ -288,7 +302,7 @@ test("test GAT scheduler round robin balance over different servers/sessions wit
 
   let lastServer = "127.0.0.1#qwerty"
 
-  for(let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3; i++) {
     // Schedule 3 times, each time the next server#session should be chosen
     let conditionObject = scheduler.checkConditionAndReturnUsers(
       experiments,

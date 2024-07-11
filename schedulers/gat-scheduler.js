@@ -79,8 +79,7 @@ class GatScheduler {
     const values = Object.values(experiments)
     // console.log(keys)
 
-
-    for(let i = 0; i < keys.length; i++) {
+    for (let i = 0; i < keys.length; i++) {
       this.currentIndex = (this.currentIndex + 1) % keys.length
       const serverIp = keys[this.currentIndex]
       const serverUrls = values[this.currentIndex]
@@ -127,7 +126,10 @@ class GatScheduler {
     if (this.useRoundRobin) {
       // Use Round Robin load balancing. This is done over sessions not server ips
 
-      const [serverIp, serverUrls] = this.#getNextServer(experiments[this.experimentName].servers, usedUrls)
+      const [serverIp, serverUrls] = this.#getNextServer(
+        experiments[this.experimentName].servers,
+        usedUrls,
+      )
       if (!serverIp) {
         return falseCondition
       }
