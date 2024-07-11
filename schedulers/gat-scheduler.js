@@ -12,6 +12,7 @@ class GatScheduler {
     this.min = parseInt(params.min)
     this.queue = new Queue(this.experimentName)
     this.currentIndex = -1
+    this.useRoundRobin = true
     console.log(`Loaded GAT scheduler params: min ${this.min}`)
   }
 
@@ -76,7 +77,7 @@ class GatScheduler {
   #getNextServer(experiments, usedUrls) {
     const keys = Object.keys(experiments)
     const values = Object.values(experiments)
-    console.log(keys)
+    // console.log(keys)
 
 
     for(let i = 0; i < keys.length; i++) {
@@ -96,7 +97,7 @@ class GatScheduler {
       if (unusedUrlsCount < this.min) {
         continue
       }
-      console.log(`index ${this.currentIndex} server ${serverIp}`)
+      // console.log(`index ${this.currentIndex} server ${serverIp}`)
       return [serverIp, serverUrls]
     }
     return [null, null]
@@ -123,75 +124,77 @@ class GatScheduler {
       return falseCondition
     }
 
-    const [serverIp, serverUrls] = this.#getNextServer(experiments[this.experimentName].servers, usedUrls)
-    if (!serverIp) {
-      return falseCondition
-    }
+    if (this.useRoundRobin) {
+      // Use Round Robin load balancing. This is done over sessions not server ips
 
-    const users = this.queue.pop(this.min)
-    for (const user of users) {
-      while (true) {
-        const url = serverUrls.pop()
-        if (!usedUrls.has(url)) {
-          user.redirectedUrl = url
-          user.changeState("waitAgreement")
-          usedUrls.add(url)
-          break
-        }
-        serverUrls.unshift(url)
+      const [serverIp, serverUrls] = this.#getNextServer(experiments[this.experimentName].servers, usedUrls)
+      if (!serverIp) {
+        return falseCondition
       }
-    }
-    // this.queue.unlock()
-    return {
-      condition: true,
-      users: users,
-      waitForCount: 0,
-      server: serverIp,
-    }
 
+      const users = this.queue.pop(this.min)
+      for (const user of users) {
+        while (true) {
+          const url = serverUrls.pop()
+          if (!usedUrls.has(url)) {
+            user.redirectedUrl = url
+            user.changeState("waitAgreement")
+            usedUrls.add(url)
+            break
+          }
+          serverUrls.unshift(url)
+        }
+      }
+      // this.queue.unlock()
+      return {
+        condition: true,
+        users: users,
+        waitForCount: 0,
+        server: serverIp,
+      }
+    } else {
+      // Fill up first server first (Spillover) load balancer
+      for (const [serverIp, serverUrls] of Object.entries(
+        experiments[this.experimentName].servers,
+      )) {
+        if (serverUrls.length < this.min) {
+          continue
+        }
 
+        let unusedUrlsCount = 0
+        for (let serverUrl of serverUrls) {
+          if (!usedUrls.has(serverUrl)) {
+            unusedUrlsCount += 1
+          }
+        }
+        if (unusedUrlsCount < this.min) {
+          continue
+        }
 
-    // for (const [serverIp, serverUrls] of Object.entries(
-    //   experiments[this.experimentName].servers,
-    // )) {
-    //   if (serverUrls.length < this.min) {
-    //     continue
-    //   }
-    //
-    //   let unusedUrlsCount = 0
-    //   for (let serverUrl of serverUrls) {
-    //     if (!usedUrls.has(serverUrl)) {
-    //       unusedUrlsCount += 1
-    //     }
-    //   }
-    //   if (unusedUrlsCount < this.min) {
-    //     continue
-    //   }
-    //
-    //   const users = this.queue.pop(this.min)
-    //   for (const user of users) {
-    //     while (true) {
-    //       const url = serverUrls.pop()
-    //       if (!usedUrls.has(url)) {
-    //         user.redirectedUrl = url
-    //         user.changeState("waitAgreement")
-    //         usedUrls.add(url)
-    //         break
-    //       }
-    //       serverUrls.unshift(url)
-    //     }
-    //   }
-    //   // this.queue.unlock()
-    //   return {
-    //     condition: true,
-    //     users: users,
-    //     waitForCount: 0,
-    //     server: serverIp,
-    //   }
-    // }
-    //
-    // // this.queue.unlock()
-    // return falseCondition
+        const users = this.queue.pop(this.min)
+        for (const user of users) {
+          while (true) {
+            const url = serverUrls.pop()
+            if (!usedUrls.has(url)) {
+              user.redirectedUrl = url
+              user.changeState("waitAgreement")
+              usedUrls.add(url)
+              break
+            }
+            serverUrls.unshift(url)
+          }
+        }
+        // this.queue.unlock()
+        return {
+          condition: true,
+          users: users,
+          waitForCount: 0,
+          server: serverIp,
+        }
+      }
+      // this.queue.unlock()
+      return falseCondition
+    } // Else
   }
 } // Class
 
