@@ -1,4 +1,3 @@
-const { weightSrvRecords } = require("ioredis/built/cluster/util")
 const io = require("socket.io-client")
 const CryptoJS = require("crypto-js")
 require("dotenv").config()
