@@ -854,14 +854,9 @@ async function main() {
         return
       }
       if (user.state == "redirected") {
-        // Something went wrong here
-        // Try starting ganme with one user
-        // user.experimentUrl = expUrl
-        // user.groupId = agreementId
-        // user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-        // user.server = server
+        // Something went wrong to get here
+        // Try starting game with one user
         startGame([user], [user.experimentUrl], null, user.groupId, user.server)
-
         return
       }
       if (user.state === "inoTreePages") {
@@ -869,7 +864,6 @@ async function main() {
         return
       }
       // console.log(`${userId} in state ${user.state}.`)
-
       // console.log(`NEw user: ${user.userId} ${user.state}`)
       user.addListenerForState("queued", async (user, state) => {
         const userId = user.userId
@@ -967,10 +961,6 @@ async function main() {
       function redirect() {
         const sock = user.webSocket
         // Emit a custom event with the game room URL
-        // user.experimentUrl = expUrl
-        // user.groupId = agreementId
-        // user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-        // user.server = server
         sock.emit("gameStart", { room: user.redirectedUrl })
         user.changeState("inoTreePages")
         usersDb.upsert(user)
@@ -982,7 +972,10 @@ async function main() {
         redirect()
       } else {
         // First update user variables on oTree server
-        // then redirect
+        // then redirect. This could go WRONG and user
+        // does not transition into inoTreePages state but
+        // statys in redirected state. We try to resolve this when
+        // user reconnects
         const config = {
           headers: {
             "otree-rest-key": otreeRestKey,
