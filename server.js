@@ -15,7 +15,6 @@ const User = require("./user.js")
 const Agreement = require("./agreement.js")
 const ClassLoader = require("./class-loader.js")
 const UserDb = require("./UserSqliteDb.js")
-const { argv0 } = require("process")
 
 require("dotenv").config()
 const otreeIPs = process.env.OTREE_IPS.split(",")
