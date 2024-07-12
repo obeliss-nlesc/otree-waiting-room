@@ -169,15 +169,24 @@ node sessions.js create [NAME] --num [NUM OF PARTICIPANTS]
 
 ## Simple info dashboard
 
-The server comes with a simple info page showing the number of available URLs, number of users and user ids per session.
-The info page is accessed through the following path:
+The server comes with a simple info pages:
+
+- sessions: showing the number of available URLs, number of users and user ids per session. The info page is accessed through the following path:
 
 ```
-http://localhost:8060/info/[EXPERIMENT_NAME]?secret=[SECRET_USED_IN_URL_PASS]
+http://localhost:8060/info/sessions/[EXPERIMENT_NAME]?secret=[SECRET_USED_IN_URL_PASS]
 ```
 
 E.g. for Experiment `DropOutTest`
 ![DropOutTest](./dropouttest_info.png)
+
+- queues: show the queues status of the different experiments including the number of users on the start page, queued, waiting, agreed, and redirected.
+
+```
+http://localhost:8060/info/queues?secret=[SECRET_USED_IN_URL_PASS]
+```
+
+E.g. ![Queues](./queues_info.png)
 
 ## Starting the server using PM2
 

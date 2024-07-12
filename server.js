@@ -257,7 +257,9 @@ const validateHmac = (req, res, next) => {
 // }
 
 async function getExperimentUrls(experiments) {
-  const expToEnable = config.experiments.map((e) => e.name)
+  const expToEnable = config.experiments
+    .filter((e) => e.enabled)
+    .map((e) => e.name)
   const usedUrlsFromDb = usersDb.getUsedUrls()
 
   // clear existing URLs first:
@@ -429,7 +431,9 @@ async function main() {
   // Load URLs from oTree servers
   await getExperimentUrls(experiments)
 
-  const expToEnable = config.experiments.map((e) => e.name)
+  const expToEnable = config.experiments
+    .filter((e) => e.enabled)
+    .map((e) => e.name)
   // Load schedulers from directory
   // initialize returns a new ClassLoader
   const SchedulerPlugins = await ClassLoader.initialize("./schedulers")
@@ -583,7 +587,83 @@ async function main() {
     res.status(201).json(experiments)
   })
 
-  app.get("/info/:experimentId", validatePass, async (req, res) => {
+  app.get("/info/queues/:experimentId?", validatePass, async (req, res) => {
+    const experimentId = req.params.experimentId
+    const experiment = experiments[experimentId]
+    let htmlString = `<!doctype html><html><title>Queues</title>
+                        <style>th {text-align: left;}</style>
+                        <body><h1>Queues info</h1><table border="1">`
+    const headerTable = `<tr>
+                            <th>Queue name</th>
+                            <th>No. Of users on Start</th>
+                            <th>No. Of users in Queue</th>
+                            <th>No. of users in Waiting Agreement</th>
+                            <th>No. of users that Agreed</th>
+                            <th>No. of users that Redirected</th>
+                        </tr>`
+    htmlString += headerTable
+    let total = 0
+    let totalQueue = 0
+    let totalWait = 0
+    let totalRedirected = 0
+    let totalAgreed = 0
+    let totalStart = 0
+    // res.status(200).send(JSON.stringify(experiments))
+    // return
+    const usersFromDb = Array.from(usersDb.values())
+    Object.values(experiments)
+      .filter((e) => {
+        return e.enabled
+      })
+      .forEach((e) => {
+        const usersWaiting = usersFromDb
+          .filter(
+            (u) => (u.experimentId == e.name) & (u.state == "waitAgreement"),
+          )
+          .map((u) => u.userId)
+        const usersRedirected = usersFromDb
+          .filter(
+            (u) => (u.experimentId == e.name) & (u.state == "inoTreePages"),
+          )
+          .map((u) => u.userId)
+        const usersAgreed = usersFromDb
+          .filter((u) => (u.experimentId == e.name) & (u.state == "agreed"))
+          .map((u) => u.userId)
+        const usersConnected = usersFromDb
+          .filter(
+            (u) => (u.experimentId == e.name) & (u.state == "startedPage"),
+          )
+          .map((u) => u.userId)
+        const q = e.scheduler.queue.getQueue()
+        totalQueue += q.length
+        totalWait += usersWaiting.length
+        totalRedirected += usersRedirected.length
+        totalAgreed += usersAgreed.length
+        totalStart += usersConnected.length
+        let row = `<tr>
+                    <td>${e.name}</td>
+                    <td>${usersConnected.length}</td>
+                    <td>${q.length}</td>
+                    <td>${usersWaiting.length}</td>
+                    <td>${usersAgreed.length}</td>
+                    <td>${usersRedirected.length}</td>
+                </tr>`
+        htmlString += row
+      })
+    let lastRow = `<tr>
+                  <td>TOTALS</td>
+                  <td>${totalStart}</td>
+                  <td>${totalQueue}</td>
+                  <td>${totalWait}</td>
+                  <td>${totalAgreed}</td>
+                  <td>${totalRedirected}</td>
+              </tr>`
+    htmlString += `${lastRow}</table></body></html>`
+
+    res.status(201).send(htmlString)
+  })
+
+  app.get("/info/sessions/:experimentId", validatePass, async (req, res) => {
     const experimentId = req.params.experimentId
     const experiment = experiments[experimentId]
     if (!experiment) {
@@ -772,13 +852,17 @@ async function main() {
         // console.log(`${userId} in state ${user.state}.`)
         return
       }
+      if (user.state == "redirected") {
+        // Something went wrong to get here
+        // Try starting game with one user
+        startGame([user], [user.experimentUrl], null, user.groupId, user.server)
+        return
+      }
       if (user.state === "inoTreePages") {
-        //console.log(`User ${userId} already already redirected`)
         socket.emit("gameStart", { room: user.redirectedUrl.toString() })
         return
       }
       // console.log(`${userId} in state ${user.state}.`)
-
       // console.log(`NEw user: ${user.userId} ${user.state}`)
       user.addListenerForState("queued", async (user, state) => {
         const userId = user.userId
@@ -862,8 +946,12 @@ async function main() {
       // const compoundKey = `${userId}:${experimentId}`
       const compoundKey = userId
       const user = usersDb.get(compoundKey)
-      user.changeState("redirected")
       const expUrl = new URL(urls[i])
+      user.experimentUrl = expUrl
+      user.groupId = agreementId
+      user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
+      user.server = server
+      user.changeState("redirected")
       // Set user variables on oTree server
       // Vars in oTree experiment template are accessed using
       // the syntax {{ player.participant.vars.age }} where age is a var
@@ -872,12 +960,8 @@ async function main() {
       function redirect() {
         const sock = user.webSocket
         // Emit a custom event with the game room URL
-        user.experimentUrl = expUrl
-        user.groupId = agreementId
-        user.redirectedUrl = `${expUrl}?participant_label=${user.userId}`
-        user.server = server
-        user.changeState("inoTreePages")
         sock.emit("gameStart", { room: user.redirectedUrl })
+        user.changeState("inoTreePages")
         usersDb.upsert(user)
         console.log(`Redirecting user ${user.userId} to ${user.redirectedUrl}`)
       }
@@ -887,7 +971,10 @@ async function main() {
         redirect()
       } else {
         // First update user variables on oTree server
-        // then redirect
+        // then redirect. This could go WRONG and user
+        // does not transition into inoTreePages state but
+        // statys in redirected state. We try to resolve this when
+        // user reconnects
         const config = {
           headers: {
             "otree-rest-key": otreeRestKey,
