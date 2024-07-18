@@ -177,15 +177,18 @@ The server comes with a simple info pages:
 http://localhost:8060/info/sessions/[EXPERIMENT_NAME]?secret=[SECRET_USED_IN_URL_PASS]
 ```
 
+`[EXPERIMENT_NAME]` is optional and without it, all experiments are shown.
+
 E.g. for Experiment `DropOutTest`
 ![DropOutTest](./dropouttest_info.png)
 
 - queues: show the queues status of the different experiments including the number of users on the start page, queued, waiting, agreed, and redirected.
 
 ```
-http://localhost:8060/info/queues?secret=[SECRET_USED_IN_URL_PASS]
+http://localhost:8060/info/queues/[EXPERIMENT_NAME]?secret=[SECRET_USED_IN_URL_PASS]
 ```
 
+`[EXPERIMENT_NAME]` is optional and without it, all experiments are shown.
 E.g. ![Queues](./queues_info.png)
 
 ## Starting the server using PM2
