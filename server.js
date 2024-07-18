@@ -588,8 +588,7 @@ async function main() {
   })
 
   app.get("/info/queues/:experimentId?", validatePass, async (req, res) => {
-    const experimentId = req.params.experimentId
-    const experiment = experiments[experimentId]
+    const paramExperimentId = req.params.experimentId
     let htmlString = `<!doctype html><html><title>Queues</title>
                         <style>th {text-align: left;}</style>
                         <body><h1>Queues info</h1><table border="1">`
@@ -608,12 +607,17 @@ async function main() {
     let totalRedirected = 0
     let totalAgreed = 0
     let totalStart = 0
-    // res.status(200).send(JSON.stringify(experiments))
-    // return
     const usersFromDb = Array.from(usersDb.values())
     Object.values(experiments)
       .filter((e) => {
-        return e.enabled
+        if (!paramExperimentId) {
+          return e.enabled
+        } else {
+          return (
+            (e.name.toLowerCase() == paramExperimentId.toLowerCase()) &
+            e.enabled
+          )
+        }
       })
       .forEach((e) => {
         const usersWaiting = usersFromDb
@@ -663,51 +667,64 @@ async function main() {
     res.status(201).send(htmlString)
   })
 
-  app.get("/info/sessions/:experimentId", validatePass, async (req, res) => {
-    const experimentId = req.params.experimentId
-    const experiment = experiments[experimentId]
-    if (!experiment) {
-      res.status(404).send()
-      return
-    }
-    let htmlString = `<!doctype html><html><title>${experimentId} Urls</title>
-                        <style>th {text-align: left;}</style>
-                        <body><h1>${experimentId}</h1><table border="1">`
-    const headerTable = `<tr>
-                            <th>Session</th>
-                            <th>No. Of Available Urls</th>
-                            <th>No. Of Users in session</th>
-                            <th>Users in session</th>
-                        </tr>`
-    htmlString += headerTable
-    let total = 0
-    let totalUsers = 0
-    Object.keys(experiment.servers).forEach((k) => {
-      const urls = experiment.servers[k]
-      const numberOfUrls = urls.length
-      total += numberOfUrls
-      const sessionId = k.split("#")[1]
-      const usersInSession = usersDb.getUsersInSession(sessionId).map((u) => {
-        return u.userId
+  app.get("/info/sessions/:experimentId?", validatePass, async (req, res) => {
+    const paramExperimentId = req.params.experimentId
+    let htmlString =
+      "<!doctype html><html><title>Sessions Info</title> <style>th {text-align: left;}</style> <body>"
+    Object.values(experiments)
+      .filter((e) => {
+        if (!paramExperimentId) {
+          return e.enabled
+        } else {
+          return (
+            (e.name.toLowerCase() == paramExperimentId.toLowerCase()) &
+            e.enabled
+          )
+        }
       })
-      const numberOfUsers = usersInSession.length
-      totalUsers += numberOfUsers
-      const host = k.split("#")[0]
-      let row = `<tr>
-                    <td>${sessionId}</td>
-                    <td>${numberOfUrls}</td>
-                    <td>${numberOfUsers}</td>
-                    <td>${JSON.stringify(usersInSession)}</td>
-                </tr>`
-      htmlString += row
-    })
-    let lastRow = `<tr>
-                  <td>TOTALS</td>
-                  <td>${total}</td>
-                  <td>${totalUsers}</td>
-                  <td></td>
-              </tr>`
-    htmlString += `${lastRow}</table></body></html>`
+      .forEach((e) => {
+        const experimentId = e.name
+        const experiment = experiments[experimentId]
+        htmlString += `<h1>${experimentId}</h1><table border="1">`
+        const headerTable = `<tr>
+                                <th>Session</th>
+                                <th>No. Of Available Urls</th>
+                                <th>No. Of Users in session</th>
+                                <th>Users in session</th>
+                            </tr>`
+        htmlString += headerTable
+        let total = 0
+        let totalUsers = 0
+        Object.keys(experiment.servers).forEach((k) => {
+          const urls = experiment.servers[k]
+          const numberOfUrls = urls.length
+          total += numberOfUrls
+          const sessionId = k.split("#")[1]
+          const usersInSession = usersDb
+            .getUsersInSession(sessionId)
+            .map((u) => {
+              return u.userId
+            })
+          const numberOfUsers = usersInSession.length
+          totalUsers += numberOfUsers
+          const host = k.split("#")[0]
+          let row = `<tr>
+                        <td>${sessionId}</td>
+                        <td>${numberOfUrls}</td>
+                        <td>${numberOfUsers}</td>
+                        <td>${JSON.stringify(usersInSession)}</td>
+                    </tr>`
+          htmlString += row
+        })
+        let lastRow = `<tr>
+                      <td>TOTALS</td>
+                      <td>${total}</td>
+                      <td>${totalUsers}</td>
+                      <td></td>
+                  </tr>`
+        htmlString += `${lastRow}</table>`
+      })
+    htmlString += "</body></html>"
 
     res.status(201).send(htmlString)
   })
