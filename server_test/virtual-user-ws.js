@@ -1,38 +1,35 @@
 const io = require("socket.io-client")
 const CryptoJS = require("crypto-js")
-const path = require('path')
-const fs = require('fs')
-const dotenv = require('dotenv')
-
+const path = require("path")
+const fs = require("fs")
+const dotenv = require("dotenv")
 
 // Function to search for .env file in current or parent directory
 function findEnvFile() {
-    let currentDir = process.cwd();
+  let currentDir = process.cwd()
 
-    while (true) {
-        const envPath = path.join(currentDir, '.env');
-        if (fs.existsSync(envPath)) {
-            return envPath;
-        }
-        const parentDir = path.dirname(currentDir);
-        if (parentDir === currentDir) {
-            break; // Reached the root directory
-        }
-        currentDir = parentDir;
+  while (true) {
+    const envPath = path.join(currentDir, ".env")
+    if (fs.existsSync(envPath)) {
+      return envPath
     }
+    const parentDir = path.dirname(currentDir)
+    if (parentDir === currentDir) {
+      break // Reached the root directory
+    }
+    currentDir = parentDir
+  }
 
-    return null; // .env file not found
+  return null // .env file not found
 }
 
 // Load environment variables
-const envFilePath = findEnvFile();
+const envFilePath = findEnvFile()
 if (envFilePath) {
-    dotenv.config({ path: envFilePath });
+  dotenv.config({ path: envFilePath })
 } else {
-    console.warn('.env file not found in current or parent directory');
+  console.warn(".env file not found in current or parent directory")
 }
-
-
 
 const secretKey = process.env.SECRET_KEY
 

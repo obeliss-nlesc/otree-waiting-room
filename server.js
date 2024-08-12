@@ -8,7 +8,7 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
 const fs = require("fs")
-const path = require('path');
+const path = require("path")
 const CryptoJS = require("crypto-js")
 const Queue = require("./local-queue.js")
 const db = require("./postgres-db")
@@ -41,15 +41,14 @@ const port = options.port || "8060"
 const userDbFile = options.dbFile || "./data/userdb.sqlite"
 
 // Define the path for the 'data' folder
-const dataFolderPath = path.join(__dirname, 'data');
+const dataFolderPath = path.join(__dirname, "data")
 
 // Check if the 'data' folder exists
 // and create one if not.
 if (!fs.existsSync(dataFolderPath)) {
-    // Create the 'data' folder if it doesn't exist
-    fs.mkdirSync(dataFolderPath, { recursive: true });
+  // Create the 'data' folder if it doesn't exist
+  fs.mkdirSync(dataFolderPath, { recursive: true })
 }
-
 
 /**
  *
@@ -883,7 +882,13 @@ async function main() {
       if (user.state == "redirected") {
         // Something went wrong to get here
         // Try starting game with one user
-        startGame([compoundKey], [user.experimentUrl], null, user.groupId, user.server)
+        startGame(
+          [compoundKey],
+          [user.experimentUrl],
+          null,
+          user.groupId,
+          user.server,
+        )
         return
       }
       if (user.state === "inoTreePages") {

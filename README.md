@@ -208,6 +208,7 @@ pm2 restart server
 ```
 
 ## Load testing
+
 Under `server_test` there are scripts to stress test the server. Refer to the [README](./server_test/README.md) for further information.
 
 ## API documentation

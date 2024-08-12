@@ -20,10 +20,12 @@ const experimentId = options.experimentId || "DropOutTest"
 const url = `http://${host}:${port}`
 const virtUsers = {}
 
-console.log(`Trying server url: ${url} from id ${start} to ${start + maxUsers} for experiment ${experimentId}.`)
+console.log(
+  `Trying server url: ${url} from id ${start} to ${start + maxUsers} for experiment ${experimentId}.`,
+)
 
 function runTest() {
-  for (let i = start; i < (start + maxUsers); i++) {
+  for (let i = start; i < start + maxUsers; i++) {
     const id = i
     vu = new VirtualUser(id, experimentId, url)
     virtUsers[id] = vu
