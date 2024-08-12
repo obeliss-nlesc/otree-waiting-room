@@ -872,7 +872,7 @@ async function main() {
       if (user.state == "redirected") {
         // Something went wrong to get here
         // Try starting game with one user
-        startGame([user], [user.experimentUrl], null, user.groupId, user.server)
+        startGame([compoundKey], [user.experimentUrl], null, user.groupId, user.server)
         return
       }
       if (user.state === "inoTreePages") {
