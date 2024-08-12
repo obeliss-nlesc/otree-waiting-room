@@ -207,9 +207,17 @@ To restart the server
 pm2 restart server
 ```
 
+## Unit test
+
+Under `./test/` there are several unit tests. These can be performed with the current command:
+
+```bash
+npm run test
+```
+
 ## Load testing
 
-Under `server_test` there are scripts to stress test the server. Refer to the [README](./server_test/README.md) for further information.
+Under `./server_test` there are scripts to stress test the server. Refer to the [README](./server_test/README.md) for further information.
 
 ## API documentation
 
