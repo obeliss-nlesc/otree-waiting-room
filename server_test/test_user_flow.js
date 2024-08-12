@@ -1,20 +1,30 @@
 const VirtualUser = require("./virtual-user-ws")
-const fs = require("fs")
+const { program } = require("commander")
 const http = require("http")
 
-function randomBetween(min, max) {
-  return Math.floor(Math.random() * (max - min) + min)
-}
+program
+  .option("-p, --port <int>", "waiting-room server listen port.")
+  .option("-hn, --host <type>", "waiting-room server host.")
+  .option("-s, --start <int>", "start userId range.")
+  .option("-n, --num <int>", "number of participants.")
+  .option("-e, --experimentId <type>", "experiment name.")
 
-const maxUsers = parseInt(process.argv[2]) ? parseInt(process.argv[2]) : 100
-const experimentId = "DropOutTest"
-const url = "http://localhost:8060"
+program.parse(process.argv)
+const options = program.opts()
+
+const host = options.host || "localhost"
+const port = options.port || 8060
+const start = parseInt(options.start) || 0
+const maxUsers = parseInt(options.num) || 99
+const experimentId = options.experimentId || "DropOutTest"
+const url = `http://${host}:${port}`
 const virtUsers = {}
 
+console.log(`Trying server url: ${url} from id ${start} to ${start + maxUsers} for experiment ${experimentId}.`)
+
 function runTest() {
-  for (let i = 0; i < maxUsers; i++) {
-    const id = 1000 + i
-    //const id = randomBetween(1, 9999999)
+  for (let i = start; i < (start + maxUsers); i++) {
+    const id = i
     vu = new VirtualUser(id, experimentId, url)
     virtUsers[id] = vu
   }
@@ -28,14 +38,14 @@ function runTest() {
   })
 }
 
-const options = {
-  hostname: "localhost",
-  port: 8060,
+const Urloptions = {
+  hostname: host,
+  port: port,
   path: "/",
   method: "GET",
 }
 
-const req = http.request(options, (res) => {
+const req = http.request(Urloptions, (res) => {
   if (res.statusCode > 0) {
     console.log("Server is up and running.")
     runTest()
