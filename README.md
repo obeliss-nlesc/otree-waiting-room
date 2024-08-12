@@ -207,6 +207,9 @@ To restart the server
 pm2 restart server
 ```
 
+## Load testing
+Under `server_test` there are scripts to stress test the server. Refer to the [README](./server_test/README.md) for further information.
+
 ## API documentation
 
 API endpoints are documented using Postman and can be found [here](https://documenter.getpostman.com/view/1612141/2s9YeG7Bqm).
