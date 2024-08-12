@@ -13,17 +13,16 @@ class GatScheduler {
     this.queue = new Queue(this.experimentName)
     this.currentIndex = -1
     this.useRoundRobin = true
-    console.log(`Loaded GAT scheduler params: min ${this.min}`)
+    // console.log(`Loaded GAT scheduler params: min ${this.min}`)
   }
 
   /*
    * @type user {User}
    */
   async queueUser(user) {
-    // await this.queue.wait()
     // Queue user object which allows schedulers to decide on additional parameters
     // passed on in token like age and gender.
-    //console.log(`GAT queued user: ${user.userId} params ${JSON.stringify(user.tokenParams)}`)
+    // await this.queue.wait()
     this.queue.push(user)
     // this.queue.unlock()
   }
