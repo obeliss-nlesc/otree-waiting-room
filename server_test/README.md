@@ -6,8 +6,14 @@ Run the server
 npm run dev-newDb
 ```
 
-Run testing script with N users
+Run testing script with 99 users
 
 ```bash
-node test_user_flow.js N
+node test_user_flow.js -hn localhost -p 8060 -e DropOutTest -n 99
+```
+
+Run paralell tests using all cores available
+
+```bash
+bash start.sh 99 localhost 8060 DropOutTest
 ```

@@ -8,6 +8,7 @@ const app = express()
 const server = http.createServer(app)
 const io = socketIO(server)
 const fs = require("fs")
+const path = require('path');
 const CryptoJS = require("crypto-js")
 const Queue = require("./local-queue.js")
 const db = require("./postgres-db")
@@ -38,8 +39,18 @@ const config = options.config
 
 const port = options.port || "8060"
 const userDbFile = options.dbFile || "./data/userdb.sqlite"
-//const publicKey = fs.readFileSync("./public-key.pem", "utf8")
-//
+
+// Define the path for the 'data' folder
+const dataFolderPath = path.join(__dirname, 'data');
+
+// Check if the 'data' folder exists
+// and create one if not.
+if (!fs.existsSync(dataFolderPath)) {
+    // Create the 'data' folder if it doesn't exist
+    fs.mkdirSync(dataFolderPath, { recursive: true });
+}
+
+
 /**
  *
  * @type {Set<string>}
